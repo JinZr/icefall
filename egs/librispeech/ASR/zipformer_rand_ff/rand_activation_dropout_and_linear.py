@@ -10,9 +10,11 @@ import torch.nn.functional as F
 from torch.cuda.amp import custom_fwd, custom_bwd
 
 
-from scaling import limit_param_value, ScaledLinear
+from scaling import limit_param_value, ScaledLinear, ScheduledFloat
 
 from rand_linear import Linear
+
+FloatLike = Union[float, ScheduledFloat]
 
 
 class ActivationDropoutAndLinearFunctionRand(torch.autograd.Function):
