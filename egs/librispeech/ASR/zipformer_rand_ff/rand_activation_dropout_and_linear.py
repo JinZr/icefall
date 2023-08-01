@@ -1,9 +1,14 @@
+from typing import List, Optional, Tuple, Union
+
+
 import k2
 
 import torch
 from torch import Tensor, nn
 from torch.nn import init, Parameter
 import torch.nn.functional as F
+from torch.cuda.amp import custom_fwd, custom_bwd
+
 
 from scaling import limit_param_value, ScaledLinear
 
