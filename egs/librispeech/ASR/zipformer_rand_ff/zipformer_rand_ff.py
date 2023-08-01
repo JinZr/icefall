@@ -630,13 +630,13 @@ class Zipformer2EncoderLayer(nn.Module):
 
         self.self_attn2 = SelfAttention(embed_dim, num_heads, value_head_dim)
 
-        self.feed_forward1 = FeedforwardModule(
+        self.feed_forward1 = FeedforwardModuleRand(
             embed_dim, (feedforward_dim * 3) // 4, dropout
         )
 
-        self.feed_forward2 = FeedforwardModule(embed_dim, feedforward_dim, dropout)
+        self.feed_forward2 = FeedforwardModuleRand(embed_dim, feedforward_dim, dropout)
 
-        self.feed_forward3 = FeedforwardModule(
+        self.feed_forward3 = FeedforwardModuleRand(
             embed_dim, (feedforward_dim * 5) // 4, dropout
         )
 
