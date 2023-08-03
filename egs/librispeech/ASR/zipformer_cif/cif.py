@@ -7,7 +7,7 @@ class CifMiddleware(nn.Module):
         self,
         cif_threshold: float = 0.99,
         cif_embedding_dim: int = 256,
-        encoder_embed_dim: int = 256,  # should be the innermost dimension of inputs
+        encoder_embed_dim: int = 512,  # should be the innermost dimension of inputs
         produce_weight_type: str = "conv",
         conv_cif_width: int = 3,  # try 3 or 5
         conv_cif_dropout: float = 0.1,
@@ -79,6 +79,8 @@ class CifMiddleware(nn.Module):
         # Collect inputs
         encoder_outputs = encoder_outputs  # B x T x C
         encoder_padding_mask = encoder_padding_mask  # B x T
+        # print(encoder_outputs.shape)
+        # exit()
 
         # Produce weights for integration (accumulation)
         if self.produce_weight_type == "dense":
