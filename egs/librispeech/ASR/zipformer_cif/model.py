@@ -241,7 +241,7 @@ class AsrModel(nn.Module):
         # Calculate the quantity loss
         qtt_loss = torch.tensor(0.0)
         if self.use_quantity_loss:
-            target_lengths_for_qtt_loss = y_lens  # Lengths after adding eos token, [B]
+            target_lengths_for_qtt_loss = y_lens.cuda()  # Lengths after adding eos token, [B]
             qtt_loss = torch.abs(quantity_out - target_lengths_for_qtt_loss).sum()
 
         lm = self.simple_lm_proj(decoder_out)

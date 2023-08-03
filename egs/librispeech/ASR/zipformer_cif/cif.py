@@ -6,7 +6,7 @@ class CifMiddleware(nn.Module):
     def __init__(
         self,
         cif_threshold: float = 0.99,
-        cif_embedding_dim: int = 256,
+        cif_embedding_dim: int = 512,
         encoder_embed_dim: int = 512,  # should be the innermost dimension of inputs
         produce_weight_type: str = "conv",
         conv_cif_width: int = 3,  # try 3 or 5
