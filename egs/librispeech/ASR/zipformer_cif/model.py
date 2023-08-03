@@ -21,10 +21,11 @@ from typing import Optional, Tuple
 import k2
 import torch
 import torch.nn as nn
+from cif import CifMiddleware
 from encoder_interface import EncoderInterface
+from scaling import ScaledLinear
 
 from icefall.utils import add_sos, make_pad_mask
-from scaling import ScaledLinear
 
 
 class AsrModel(nn.Module):
@@ -34,11 +35,13 @@ class AsrModel(nn.Module):
         encoder: EncoderInterface,
         decoder: Optional[nn.Module] = None,
         joiner: Optional[nn.Module] = None,
+        cif: Optional[nn.Module] = None,
         encoder_dim: int = 384,
         decoder_dim: int = 512,
         vocab_size: int = 500,
         use_transducer: bool = True,
         use_ctc: bool = False,
+        use_quantity_loss: bool = True,
     ):
         """A joint CTC & Transducer ASR model.
 
@@ -81,6 +84,10 @@ class AsrModel(nn.Module):
 
         self.encoder_embed = encoder_embed
         self.encoder = encoder
+        self.cif = cif
+        self.use_quantity_loss = use_quantity_loss
+
+        assert self.cif is CifMiddleware
 
         self.use_transducer = use_transducer
         if use_transducer:
@@ -325,14 +332,37 @@ class AsrModel(nn.Module):
         # Compute encoder outputs
         encoder_out, encoder_out_lens = self.forward_encoder(x, x_lens)
 
+        cif_out_dict = self.cif(encoder_out, encoder_out_lens)
+        cif_out, cif_out_padding_mask, cif_out_lens, quantity_out = (
+            cif_out_dict["cif_output"],
+            cif_out_dict["cif_out_padding_mask"],
+            cif_out_dict["cif_out_lens"],
+            cif_out_dict["quantity_out"],
+        )
+
         row_splits = y.shape.row_splits(1)
         y_lens = row_splits[1:] - row_splits[:-1]
 
+        # Calculate the quantity loss
+        qtt_loss = torch.tensor(0.0)
+        if self.use_quantity_loss:
+            target_lengths_for_qtt_loss = y_lens  # Lengths after adding eos token, [B]
+            qtt_loss = torch.abs(quantity_out - target_lengths_for_qtt_loss).sum()
+
         if self.use_transducer:
             # Compute transducer loss
+            # simple_loss, pruned_loss = self.forward_transducer(
+            #     encoder_out=encoder_out,
+            #     encoder_out_lens=encoder_out_lens,
+            #     y=y.to(x.device),
+            #     y_lens=y_lens,
+            #     prune_range=prune_range,
+            #     am_scale=am_scale,
+            #     lm_scale=lm_scale,
+            # )
             simple_loss, pruned_loss = self.forward_transducer(
-                encoder_out=encoder_out,
-                encoder_out_lens=encoder_out_lens,
+                encoder_out=cif_out,
+                encoder_out_lens=cif_out_lens,
                 y=y.to(x.device),
                 y_lens=y_lens,
                 prune_range=prune_range,
@@ -355,4 +385,4 @@ class AsrModel(nn.Module):
         else:
             ctc_loss = torch.empty(0)
 
-        return simple_loss, pruned_loss, ctc_loss
+        return simple_loss, pruned_loss, ctc_loss, qtt_loss

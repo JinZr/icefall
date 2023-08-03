@@ -268,6 +268,8 @@ class CifMiddleware(nn.Module):
         cif_out_padding_mask = (torch.abs(cif_outputs).sum(-1) != 0.0).int()
         # cif_out_padding_mask has shape B x T_c, where locations with value 0 are the padded locations.
 
+        cif_out_lens = cif_out_padding_mask.sum(-1)
+
         if self.training:
             quantity_out = org_weight.sum(-1)
         else:
@@ -279,6 +281,7 @@ class CifMiddleware(nn.Module):
         return {
             "cif_out": cif_outputs,  # B x T_c x C
             "cif_out_padding_mask": cif_out_padding_mask,  # B x T_c
+            "cif_out_lens": cif_out_lens,  # B
             "quantity_out": quantity_out,  # B
         }
 

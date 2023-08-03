@@ -66,6 +66,7 @@ import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
 from asr_datamodule import LibriSpeechAsrDataModule
+from cif import CifMiddleware
 from decoder import Decoder
 from joiner import Joiner
 from lhotse.cut import Cut
@@ -468,6 +469,13 @@ def get_parser():
         help="Whether to use half precision training.",
     )
 
+    parser.add_argument(
+        "--use-quantity-loss",
+        type=str2bool,
+        default=True,
+        help="Whether to use quantity loss.",
+    )
+
     add_model_arguments(parser)
 
     return parser
@@ -603,15 +611,21 @@ def get_joiner_model(params: AttributeDict) -> nn.Module:
     return joiner
 
 
+def get_cif(params: AttributeDict) -> nn.Module:
+    cif = CifMiddleware()
+    return cif
+
+
 def get_model(params: AttributeDict) -> nn.Module:
-    assert (
-        params.use_transducer or params.use_ctc
-    ), (f"At least one of them should be True, "
+    assert params.use_transducer or params.use_ctc, (
+        f"At least one of them should be True, "
         f"but got params.use_transducer={params.use_transducer}, "
-        f"params.use_ctc={params.use_ctc}")
+        f"params.use_ctc={params.use_ctc}"
+    )
 
     encoder_embed = get_encoder_embed(params)
     encoder = get_encoder_model(params)
+    cif = get_cif(params)
 
     if params.use_transducer:
         decoder = get_decoder_model(params)
@@ -625,11 +639,13 @@ def get_model(params: AttributeDict) -> nn.Module:
         encoder=encoder,
         decoder=decoder,
         joiner=joiner,
+        cif=cif,
         encoder_dim=max(_to_int_tuple(params.encoder_dim)),
         decoder_dim=params.decoder_dim,
         vocab_size=params.vocab_size,
         use_transducer=params.use_transducer,
         use_ctc=params.use_ctc,
+        use_quantity_loss=params.use_quantity_loss,
     )
     return model
 
@@ -792,7 +808,7 @@ def compute_loss(
     y = k2.RaggedTensor(y)
 
     with torch.set_grad_enabled(is_training):
-        simple_loss, pruned_loss, ctc_loss = model(
+        simple_loss, pruned_loss, ctc_loss, qtt_loss = model(
             x=feature,
             x_lens=feature_lens,
             y=y,
@@ -808,20 +824,23 @@ def compute_loss(
             # take down the scale on the simple loss from 1.0 at the start
             # to params.simple_loss scale by warm_step.
             simple_loss_scale = (
-                s if batch_idx_train >= warm_step
+                s
+                if batch_idx_train >= warm_step
                 else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
             )
             pruned_loss_scale = (
-                1.0 if batch_idx_train >= warm_step
+                1.0
+                if batch_idx_train >= warm_step
                 else 0.1 + 0.9 * (batch_idx_train / warm_step)
             )
             loss += (
                 simple_loss_scale * simple_loss
                 + pruned_loss_scale * pruned_loss
+                + qtt_loss
             )
 
         if params.use_ctc:
-            loss += params.ctc_loss_scale * ctc_loss
+            loss += params.ctc_loss_scale * ctc_loss + qtt_loss
 
     assert loss.requires_grad == is_training
 
