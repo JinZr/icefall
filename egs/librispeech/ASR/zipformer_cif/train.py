@@ -854,6 +854,7 @@ def compute_loss(
     if params.use_transducer:
         info["simple_loss"] = simple_loss.detach().cpu().item()
         info["pruned_loss"] = pruned_loss.detach().cpu().item()
+        info["qtt_loss"] = qtt_loss.detach().cpu().item()
     if params.use_ctc:
         info["ctc_loss"] = ctc_loss.detach().cpu().item()
 

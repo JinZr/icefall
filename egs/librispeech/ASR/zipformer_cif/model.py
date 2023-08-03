@@ -184,7 +184,7 @@ class AsrModel(nn.Module):
         encoder_out_lens: torch.Tensor,
         y: k2.RaggedTensor,
         y_lens: torch.Tensor,
-        prune_range: int = 5,
+        prune_range: int = 2,
         am_scale: float = 0.0,
         lm_scale: float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -230,8 +230,23 @@ class AsrModel(nn.Module):
         boundary[:, 2] = y_lens
         boundary[:, 3] = encoder_out_lens
 
+        cif_out_dict = self.cif(encoder_out, encoder_out_lens)
+        cif_out, cif_out_padding_mask, cif_out_lens, quantity_out = (
+            cif_out_dict["cif_output"],
+            cif_out_dict["cif_out_padding_mask"],
+            cif_out_dict["cif_out_lens"],
+            cif_out_dict["quantity_out"],
+        )
+
+        # Calculate the quantity loss
+        qtt_loss = torch.tensor(0.0)
+        if self.use_quantity_loss:
+            target_lengths_for_qtt_loss = y_lens  # Lengths after adding eos token, [B]
+            qtt_loss = torch.abs(quantity_out - target_lengths_for_qtt_loss).sum()
+
         lm = self.simple_lm_proj(decoder_out)
-        am = self.simple_am_proj(encoder_out)
+        # am = self.simple_am_proj(encoder_out)
+        am = self.simple_am_proj(cif_out)
 
         # if self.training and random.random() < 0.25:
         #    lm = penalize_abs_values_gt(lm, 100.0, 1.0e-04)
@@ -283,7 +298,8 @@ class AsrModel(nn.Module):
                 reduction="sum",
             )
 
-        return simple_loss, pruned_loss
+        # return simple_loss, pruned_loss
+        return simple_loss, pruned_loss, qtt_loss
 
     def forward(
         self,
@@ -332,22 +348,8 @@ class AsrModel(nn.Module):
         # Compute encoder outputs
         encoder_out, encoder_out_lens = self.forward_encoder(x, x_lens)
 
-        cif_out_dict = self.cif(encoder_out, encoder_out_lens)
-        cif_out, cif_out_padding_mask, cif_out_lens, quantity_out = (
-            cif_out_dict["cif_output"],
-            cif_out_dict["cif_out_padding_mask"],
-            cif_out_dict["cif_out_lens"],
-            cif_out_dict["quantity_out"],
-        )
-
         row_splits = y.shape.row_splits(1)
         y_lens = row_splits[1:] - row_splits[:-1]
-
-        # Calculate the quantity loss
-        qtt_loss = torch.tensor(0.0)
-        if self.use_quantity_loss:
-            target_lengths_for_qtt_loss = y_lens  # Lengths after adding eos token, [B]
-            qtt_loss = torch.abs(quantity_out - target_lengths_for_qtt_loss).sum()
 
         if self.use_transducer:
             # Compute transducer loss
@@ -360,9 +362,9 @@ class AsrModel(nn.Module):
             #     am_scale=am_scale,
             #     lm_scale=lm_scale,
             # )
-            simple_loss, pruned_loss = self.forward_transducer(
-                encoder_out=cif_out,
-                encoder_out_lens=cif_out_lens,
+            simple_loss, pruned_loss, qtt_loss = self.forward_transducer(
+                encoder_out=encoder_out,
+                encoder_out_lens=encoder_out_lens,
                 y=y.to(x.device),
                 y_lens=y_lens,
                 prune_range=prune_range,
