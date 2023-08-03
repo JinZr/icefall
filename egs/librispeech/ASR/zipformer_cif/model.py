@@ -87,8 +87,6 @@ class AsrModel(nn.Module):
         self.cif = cif
         self.use_quantity_loss = use_quantity_loss
 
-        assert self.cif is CifMiddleware
-
         self.use_transducer = use_transducer
         if use_transducer:
             # Modules for Transducer head
@@ -230,7 +228,7 @@ class AsrModel(nn.Module):
         boundary[:, 2] = y_lens
         boundary[:, 3] = encoder_out_lens
 
-        cif_out_dict = self.cif(encoder_out, encoder_out_lens)
+        cif_out_dict = self.cif(encoder_out, make_pad_mask(encoder_out_lens), y_lens)
         cif_out, cif_out_padding_mask, cif_out_lens, quantity_out = (
             cif_out_dict["cif_output"],
             cif_out_dict["cif_out_padding_mask"],
