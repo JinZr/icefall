@@ -5,15 +5,15 @@ import torch.nn as nn
 class CifMiddleware(nn.Module):
     def __init__(
         self,
-        cif_threshold,
-        cif_embedding_dim,
-        encoder_embed_dim,
-        produce_weight_type,
-        conv_cif_width,
-        conv_cif_dropout,
-        apply_scaling,
-        apply_tail_handling,
-        tail_handling_firing_threshold,
+        cif_threshold: float = 0.99,
+        cif_embedding_dim: int = 256,
+        encoder_embed_dim: int = 256,  # should be the innermost dimension of inputs
+        produce_weight_type: str = "conv",
+        conv_cif_width: int = 3,  # try 3 or 5
+        conv_cif_dropout: float = 0.1,
+        apply_scaling: bool = True,
+        apply_tail_handling: bool = True,
+        tail_handling_firing_threshold: float = 0.5,
     ):
         super().__init__()
 
