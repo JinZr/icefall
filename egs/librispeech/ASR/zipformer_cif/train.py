@@ -808,7 +808,7 @@ def compute_loss(
     y = k2.RaggedTensor(y)
 
     with torch.set_grad_enabled(is_training):
-        simple_loss, pruned_loss, ctc_loss, qtt_loss = model(
+        simple_loss, ce_loss, ctc_loss, qtt_loss = model(
             x=feature,
             x_lens=feature_lens,
             y=y,
@@ -834,9 +834,7 @@ def compute_loss(
                 else 0.1 + 0.9 * (batch_idx_train / warm_step)
             )
             loss += (
-                simple_loss_scale * simple_loss
-                + pruned_loss_scale * pruned_loss
-                + qtt_loss
+                simple_loss_scale * simple_loss + pruned_loss_scale * ce_loss + qtt_loss
             )
 
         if params.use_ctc:
@@ -853,7 +851,7 @@ def compute_loss(
     info["loss"] = loss.detach().cpu().item()
     if params.use_transducer:
         info["simple_loss"] = simple_loss.detach().cpu().item()
-        info["pruned_loss"] = pruned_loss.detach().cpu().item()
+        info["ce_loss"] = ce_loss.detach().cpu().item()
         info["qtt_loss"] = qtt_loss.detach().cpu().item()
     if params.use_ctc:
         info["ctc_loss"] = ctc_loss.detach().cpu().item()
