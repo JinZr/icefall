@@ -6,8 +6,8 @@ class CifMiddleware(nn.Module):
     def __init__(
         self,
         cif_threshold: float = 0.99,
-        cif_embedding_dim: int = 256,
-        encoder_embed_dim: int = 256,  # should be the innermost dimension of inputs
+        cif_embedding_dim: int = 512,
+        encoder_embed_dim: int = 512,  # should be the innermost dimension of inputs
         produce_weight_type: str = "conv",
         conv_cif_width: int = 3,  # try 3 or 5
         conv_cif_dropout: float = 0.1,
@@ -57,7 +57,7 @@ class CifMiddleware(nn.Module):
                 self.encoder_embed_dim, self.cif_output_dim, bias=False
             ).cuda()
 
-    def forward(self, encoder_outputs, target_lengths):
+    def forward(self, encoder_outputs, encoder_padding_mask, target_lengths):
         """
         Args:
             encoder_outputs: a dictionary that includes
@@ -77,24 +77,25 @@ class CifMiddleware(nn.Module):
         """
 
         # Collect inputs
-        encoder_raw_outputs = encoder_outputs["encoder_raw_out"]  # B x T x C
-        encoder_padding_mask = encoder_outputs["encoder_padding_mask"]  # B x T
+        encoder_outputs = encoder_outputs  # B x T x C
+        encoder_padding_mask = encoder_padding_mask  # B x T
+        # print(encoder_outputs.shape)
 
         # Produce weights for integration (accumulation)
         if self.produce_weight_type == "dense":
-            proj_out = self.dense_proj(encoder_raw_outputs)
+            proj_out = self.dense_proj(encoder_outputs)
             act_proj_out = torch.relu(proj_out)
             sig_input = self.weight_proj(act_proj_out)
             weight = torch.sigmoid(sig_input)
         elif self.produce_weight_type == "conv":
-            conv_input = encoder_raw_outputs.permute(0, 2, 1)
+            conv_input = encoder_outputs.permute(0, 2, 1)
             conv_out = self.conv(conv_input)
             proj_input = conv_out.permute(0, 2, 1)
             proj_input = self.conv_dropout(proj_input)
             sig_input = self.weight_proj(proj_input)
             weight = torch.sigmoid(sig_input)
         else:
-            sig_input = self.weight_proj(encoder_raw_outputs)
+            sig_input = self.weight_proj(encoder_outputs)
             weight = torch.sigmoid(sig_input)
         # weight has shape B x T x 1
 
@@ -114,9 +115,9 @@ class CifMiddleware(nn.Module):
             weight = weight * normalize_scalar
 
         # Prepare for Integrate and fire
-        batch_size = encoder_raw_outputs.size(0)
-        max_length = encoder_raw_outputs.size(1)
-        encoder_embed_dim = encoder_raw_outputs.size(2)
+        batch_size = encoder_outputs.size(0)
+        max_length = encoder_outputs.size(1)
+        encoder_embed_dim = encoder_outputs.size(2)
         padding_start_id = not_padding_mask.sum(-1)  # shape B
 
         accumulated_weights = torch.zeros(batch_size, 0).cuda()
@@ -164,15 +165,15 @@ class CifMiddleware(nn.Module):
             # Obtain accumulated state of current step
             cur_accumulated_state = torch.where(
                 cur_is_fired.repeat(1, encoder_embed_dim),
-                (cur_weight - remained_weight) * encoder_raw_outputs[:, i, :],
-                prev_accumulated_state + cur_weight * encoder_raw_outputs[:, i, :],
+                (cur_weight - remained_weight) * encoder_outputs[:, i, :],
+                prev_accumulated_state + cur_weight * encoder_outputs[:, i, :],
             )  # B x C
 
             # Obtain fired state of current step:
             # firing locations has meaningful representations, while non-firing locations is all-zero embeddings
             cur_fired_state = torch.where(
                 cur_is_fired.repeat(1, encoder_embed_dim),
-                prev_accumulated_state + remained_weight * encoder_raw_outputs[:, i, :],
+                prev_accumulated_state + remained_weight * encoder_outputs[:, i, :],
                 torch.zeros([batch_size, encoder_embed_dim]).cuda(),
             )  # B x C
 
