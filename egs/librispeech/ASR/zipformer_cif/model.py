@@ -21,6 +21,7 @@ from typing import Optional, Tuple
 import k2
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from cif import CifMiddleware
 from encoder_interface import EncoderInterface
 from scaling import ScaledLinear
@@ -230,7 +231,7 @@ class AsrModel(nn.Module):
         boundary[:, 3] = encoder_out_lens
 
         cif_out_dict = self.cif(
-            encoder_out, make_pad_mask(encoder_out_lens), y_lens.cuda()
+            encoder_out, make_pad_mask(encoder_out_lens), y_lens.cuda() + 1
         )
         cif_out, cif_out_padding_mask, cif_out_lens, quantity_out = (
             cif_out_dict["cif_out"],
@@ -242,12 +243,17 @@ class AsrModel(nn.Module):
         # Calculate the quantity loss
         qtt_loss = torch.tensor(0.0)
         if self.use_quantity_loss:
-            target_lengths_for_qtt_loss = y_lens.cuda()  # Lengths after adding eos token, [B]
+            target_lengths_for_qtt_loss = (
+                y_lens.cuda() + 1
+            )  # Lengths after adding eos token, [B]
             qtt_loss = torch.abs(quantity_out - target_lengths_for_qtt_loss).sum()
 
         lm = self.simple_lm_proj(decoder_out)
-        # am = self.simple_am_proj(encoder_out)
-        am = self.simple_am_proj(cif_out)
+        am = self.simple_am_proj(encoder_out)
+
+        # print(y_lens)
+        # print("cif_out.shape", cif_out.shape)
+        # print("decoder_out.shape", decoder_out.shape)
 
         # if self.training and random.random() < 0.25:
         #    lm = penalize_abs_values_gt(lm, 100.0, 1.0e-04)
@@ -274,20 +280,31 @@ class AsrModel(nn.Module):
             boundary=boundary,
             s_range=prune_range,
         )
+        expanded_ranges = nn.ZeroPad2d(padding=(0, 0, 0, 1))(ranges)
+        shifted_ranges = nn.ZeroPad2d(padding=(0, 0, 1, 0))(ranges)
+        breaking_points = (
+            ~(expanded_ranges == shifted_ranges).int().sum(-1).bool()[:, 1:]
+        )
+        max_length = encoder_outputs.size(1)
+        prev_breaking_point = torch.zeros([batch_size]).cuda()
+        segments = []
 
+        for i in range(max_length):
+            pass
         # am_pruned : [B, T, prune_range, encoder_dim]
         # lm_pruned : [B, T, prune_range, decoder_dim]
-        am_pruned, lm_pruned = k2.do_rnnt_pruning(
-            am=self.joiner.encoder_proj(encoder_out),
-            lm=self.joiner.decoder_proj(decoder_out),
-            ranges=ranges,
-        )
+        # am_pruned, lm_pruned = k2.do_rnnt_pruning(
+        #     am=self.joiner.encoder_proj(encoder_out),
+        #     lm=self.joiner.decoder_proj(decoder_out),
+        #     ranges=ranges,
+        # )
 
         # logits : [B, T, prune_range, vocab_size]
 
         # project_input=False since we applied the decoder's input projections
         # prior to do_rnnt_pruning (this is an optimization for speed).
-        logits = self.joiner(am_pruned, lm_pruned, project_input=False)
+        # logits = self.joiner(am_pruned, lm_pruned, project_input=False)
+        logits = self.joiner(am, lm, project_input=False)
 
         # with torch.cuda.amp.autocast(enabled=False):
         #     pruned_loss = k2.rnnt_loss_pruned(
@@ -298,11 +315,20 @@ class AsrModel(nn.Module):
         #         boundary=boundary,
         #         reduction="sum",
         #     )
-        ce_loss = self.ce_loss(logits, y_padded[:, 1:])
+        # print(logits.shape)
+        # print(y_padded.shape)
+        # print(y_padded.pad(mode="constant", pad=(0, 1), padding_value=0))
+        # print(F.pad(y_padded, (0, 1), "constant", 0))
+        ce_loss = self.ce_loss(
+            logits.permute(0, 2, 1), F.pad(y_padded, (0, 1), "constant", 0)
+        )
+        # print(ce_loss.shape)
+        # print(ce_loss)
+        # exit()
 
         # return simple_loss, pruned_loss
         # return simple_loss, pruned_loss, qtt_loss
-        return simple_loss, ce_loss, qtt_loss
+        return ce_loss, qtt_loss
 
     def forward(
         self,
@@ -374,7 +400,7 @@ class AsrModel(nn.Module):
             #     am_scale=am_scale,
             #     lm_scale=lm_scale,
             # )
-            simple_loss, ce_loss, qtt_loss = self.forward_transducer(
+            ce_loss, qtt_loss = self.forward_transducer(
                 encoder_out=encoder_out,
                 encoder_out_lens=encoder_out_lens,
                 y=y.to(x.device),
@@ -399,4 +425,4 @@ class AsrModel(nn.Module):
         else:
             ctc_loss = torch.empty(0)
 
-        return simple_loss, ce_loss, ctc_loss, qtt_loss
+        return ce_loss, ctc_loss, qtt_loss

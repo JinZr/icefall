@@ -255,7 +255,7 @@ def add_model_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--use-ctc",
         type=str2bool,
-        default=False,
+        default=True,
         help="If True, use CTC head.",
     )
 
@@ -367,7 +367,7 @@ def get_parser():
     parser.add_argument(
         "--prune-range",
         type=int,
-        default=5,
+        default=2,
         help="The prune range for rnnt loss, it means how many symbols(context)"
         "we are using to compute the loss",
     )
@@ -808,7 +808,7 @@ def compute_loss(
     y = k2.RaggedTensor(y)
 
     with torch.set_grad_enabled(is_training):
-        simple_loss, ce_loss, ctc_loss, qtt_loss = model(
+        ce_loss, ctc_loss, qtt_loss = model(
             x=feature,
             x_lens=feature_lens,
             y=y,
@@ -820,22 +820,27 @@ def compute_loss(
         loss = 0.0
 
         if params.use_transducer:
-            s = params.simple_loss_scale
-            # take down the scale on the simple loss from 1.0 at the start
-            # to params.simple_loss scale by warm_step.
-            simple_loss_scale = (
-                s
-                if batch_idx_train >= warm_step
-                else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
-            )
-            pruned_loss_scale = (
-                1.0
-                if batch_idx_train >= warm_step
-                else 0.1 + 0.9 * (batch_idx_train / warm_step)
-            )
-            loss += (
-                simple_loss_scale * simple_loss + pruned_loss_scale * ce_loss + qtt_loss
-            )
+            # s = params.simple_loss_scale
+            # # take down the scale on the simple loss from 1.0 at the start
+            # # to params.simple_loss scale by warm_step.
+            # simple_loss_scale = (
+            #     s
+            #     if batch_idx_train >= warm_step
+            #     else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
+            # )
+            # pruned_loss_scale = (
+            #     1.0
+            #     if batch_idx_train >= warm_step
+            #     else 0.1 + 0.9 * (batch_idx_train / warm_step)
+            # )
+            # loss += (
+            #     simple_loss_scale * simple_loss + pruned_loss_scale * ce_loss + qtt_loss
+            # )
+            loss += ce_loss.cuda() + ctc_loss.cuda() + qtt_loss.cuda()
+            # print(ctc_loss.shape)
+            # print(qtt_loss.shape)
+            # print(ctc_loss)
+            # print(qtt_loss)
 
         if params.use_ctc:
             loss += params.ctc_loss_scale * ctc_loss + qtt_loss
@@ -850,7 +855,7 @@ def compute_loss(
     # Note: We use reduction=sum while computing the loss.
     info["loss"] = loss.detach().cpu().item()
     if params.use_transducer:
-        info["simple_loss"] = simple_loss.detach().cpu().item()
+        info["ctc_loss"] = ctc_loss.detach().cpu().item()
         info["ce_loss"] = ce_loss.detach().cpu().item()
         info["qtt_loss"] = qtt_loss.detach().cpu().item()
     if params.use_ctc:
@@ -1252,14 +1257,14 @@ def run(rank, world_size, args):
     valid_cuts += librispeech.dev_other_cuts()
     valid_dl = librispeech.valid_dataloaders(valid_cuts)
 
-    if not params.print_diagnostics:
-        scan_pessimistic_batches_for_oom(
-            model=model,
-            train_dl=train_dl,
-            optimizer=optimizer,
-            sp=sp,
-            params=params,
-        )
+    # if not params.print_diagnostics:
+    #     scan_pessimistic_batches_for_oom(
+    #         model=model,
+    #         train_dl=train_dl,
+    #         optimizer=optimizer,
+    #         sp=sp,
+    #         params=params,
+    #     )
 
     scaler = GradScaler(enabled=params.use_fp16, init_scale=1.0)
     if checkpoints and "grad_scaler" in checkpoints:
