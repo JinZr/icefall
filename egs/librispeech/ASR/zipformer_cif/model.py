@@ -88,8 +88,6 @@ class AsrModel(nn.Module):
         self.use_quantity_loss = use_quantity_loss
         self.ce_loss = nn.CrossEntropyLoss(reduction="sum", ignore_index=0)
 
-        assert self.cif is CifMiddleware
-
         self.use_transducer = use_transducer
         if use_transducer:
             # Modules for Transducer head
