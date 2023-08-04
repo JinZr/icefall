@@ -80,7 +80,6 @@ class CifMiddleware(nn.Module):
         encoder_outputs = encoder_outputs  # B x T x C
         encoder_padding_mask = encoder_padding_mask  # B x T
         # print(encoder_outputs.shape)
-        # exit()
 
         # Produce weights for integration (accumulation)
         if self.produce_weight_type == "dense":
