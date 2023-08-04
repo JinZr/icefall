@@ -86,6 +86,7 @@ class AsrModel(nn.Module):
         self.encoder = encoder
         self.cif = cif
         self.use_quantity_loss = use_quantity_loss
+        self.ce_loss = nn.CrossEntropyLoss(reduction="sum", ignore_index=0)
 
         self.use_transducer = use_transducer
         if use_transducer:
@@ -288,18 +289,20 @@ class AsrModel(nn.Module):
         # prior to do_rnnt_pruning (this is an optimization for speed).
         logits = self.joiner(am_pruned, lm_pruned, project_input=False)
 
-        with torch.cuda.amp.autocast(enabled=False):
-            pruned_loss = k2.rnnt_loss_pruned(
-                logits=logits.float(),
-                symbols=y_padded,
-                ranges=ranges,
-                termination_symbol=blank_id,
-                boundary=boundary,
-                reduction="sum",
-            )
+        # with torch.cuda.amp.autocast(enabled=False):
+        #     pruned_loss = k2.rnnt_loss_pruned(
+        #         logits=logits.float(),
+        #         symbols=y_padded,
+        #         ranges=ranges,
+        #         termination_symbol=blank_id,
+        #         boundary=boundary,
+        #         reduction="sum",
+        #     )
+        ce_loss = self.ce_loss(logits, y_padded[:, 1:])
 
         # return simple_loss, pruned_loss
-        return simple_loss, pruned_loss, qtt_loss
+        # return simple_loss, pruned_loss, qtt_loss
+        return simple_loss, ce_loss, qtt_loss
 
     def forward(
         self,
@@ -362,7 +365,16 @@ class AsrModel(nn.Module):
             #     am_scale=am_scale,
             #     lm_scale=lm_scale,
             # )
-            simple_loss, pruned_loss, qtt_loss = self.forward_transducer(
+            # simple_loss, pruned_loss, qtt_loss = self.forward_transducer(
+            #     encoder_out=encoder_out,
+            #     encoder_out_lens=encoder_out_lens,
+            #     y=y.to(x.device),
+            #     y_lens=y_lens,
+            #     prune_range=prune_range,
+            #     am_scale=am_scale,
+            #     lm_scale=lm_scale,
+            # )
+            simple_loss, ce_loss, qtt_loss = self.forward_transducer(
                 encoder_out=encoder_out,
                 encoder_out_lens=encoder_out_lens,
                 y=y.to(x.device),
@@ -373,7 +385,7 @@ class AsrModel(nn.Module):
             )
         else:
             simple_loss = torch.empty(0)
-            pruned_loss = torch.empty(0)
+            ce_loss = torch.empty(0)
 
         if self.use_ctc:
             # Compute CTC loss
@@ -387,4 +399,4 @@ class AsrModel(nn.Module):
         else:
             ctc_loss = torch.empty(0)
 
-        return simple_loss, pruned_loss, ctc_loss, qtt_loss
+        return simple_loss, ce_loss, ctc_loss, qtt_loss
