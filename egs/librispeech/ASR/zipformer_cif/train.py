@@ -965,6 +965,8 @@ def train_one_epoch(
     for batch_idx, batch in enumerate(train_dl):
         if batch_idx % 10 == 0:
             set_batch_count(model, get_adjusted_batch_count(params))
+        if batch_idx < 2:
+            continue
 
         params.batch_idx_train += 1
         batch_size = len(batch["supervisions"]["text"])

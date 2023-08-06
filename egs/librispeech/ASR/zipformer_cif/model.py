@@ -87,9 +87,13 @@ class AsrModel(nn.Module):
         self.encoder = encoder
         self.cif = cif
         self.use_quantity_loss = use_quantity_loss
-        self.ce_loss = nn.CrossEntropyLoss(reduction="sum", ignore_index=0)
+        self.ce_loss = nn.CrossEntropyLoss(reduction="sum", ignore_index=1)
 
         self.use_transducer = use_transducer
+
+        self.encoder_dim = encoder_dim
+        self.decoder_dim = decoder_dim
+
         if use_transducer:
             # Modules for Transducer head
             assert decoder is not None
@@ -207,7 +211,6 @@ class AsrModel(nn.Module):
             The scale to smooth the loss with lm (output of predictor network)
             part
         """
-        # Now for the decoder, i.e., the prediction network
         blank_id = self.decoder.blank_id
         sos_y = add_sos(y, sos_id=blank_id)
 
@@ -230,30 +233,8 @@ class AsrModel(nn.Module):
         boundary[:, 2] = y_lens
         boundary[:, 3] = encoder_out_lens
 
-        cif_out_dict = self.cif(
-            encoder_out, make_pad_mask(encoder_out_lens), y_lens.cuda() + 1
-        )
-        cif_out, cif_out_padding_mask, cif_out_lens, quantity_out = (
-            cif_out_dict["cif_out"],
-            cif_out_dict["cif_out_padding_mask"],
-            cif_out_dict["cif_out_lens"],
-            cif_out_dict["quantity_out"],
-        )
-
-        # Calculate the quantity loss
-        qtt_loss = torch.tensor(0.0)
-        if self.use_quantity_loss:
-            target_lengths_for_qtt_loss = (
-                y_lens.cuda() + 1
-            )  # Lengths after adding eos token, [B]
-            qtt_loss = torch.abs(quantity_out - target_lengths_for_qtt_loss).sum()
-
         lm = self.simple_lm_proj(decoder_out)
         am = self.simple_am_proj(encoder_out)
-
-        # print(y_lens)
-        # print("cif_out.shape", cif_out.shape)
-        # print("decoder_out.shape", decoder_out.shape)
 
         # if self.training and random.random() < 0.25:
         #    lm = penalize_abs_values_gt(lm, 100.0, 1.0e-04)
@@ -280,17 +261,62 @@ class AsrModel(nn.Module):
             boundary=boundary,
             s_range=prune_range,
         )
+
+        proj_am = self.joiner.encoder_proj(encoder_out)
+        proj_lm = self.joiner.decoder_proj(decoder_out)
+
+        cif_out_dict = self.cif(
+            proj_am, make_pad_mask(encoder_out_lens), y_lens.cuda() + 1
+        )
+        # print(y_lens)
+        cif_out, cif_out_padding_mask, cif_out_lens, quantity_out, cif_weight = (
+            cif_out_dict["cif_out"],
+            cif_out_dict["cif_out_padding_mask"],
+            cif_out_dict["cif_out_lens"],
+            cif_out_dict["quantity_out"],
+            cif_out_dict["cif_weight"],
+        )
+        print(cif_out_padding_mask.shape)
+        print(cif_out_padding_mask.sum(-1))
+
         expanded_ranges = nn.ZeroPad2d(padding=(0, 0, 0, 1))(ranges)
         shifted_ranges = nn.ZeroPad2d(padding=(0, 0, 1, 0))(ranges)
         breaking_points = (
             ~(expanded_ranges == shifted_ranges).int().sum(-1).bool()[:, 1:]
-        )
-        max_length = encoder_outputs.size(1)
-        prev_breaking_point = torch.zeros([batch_size]).cuda()
-        segments = []
+        )  # shape B x T
 
-        for i in range(max_length):
-            pass
+        batch_size = encoder_out.size(0)
+        max_length = encoder_out.size(1)
+        encoder_embed_dim = encoder_out.size(2)
+        encoder_out_mask = make_pad_mask(encoder_out_lens)
+        # padding_start_id = not_padding_mask.sum(-1)  # shape B
+        padding_start_id = ~encoder_out_mask.sum(-1)  # shape B
+
+        # Calculate the quantity loss
+        qtt_loss = torch.tensor(0.0).cuda()
+        if self.use_quantity_loss:
+            cif_weight_cumsum = torch.cumsum(cif_weight, dim=1)
+            for i in range(batch_size):
+                breaking_points_index = torch.nonzero(breaking_points[i]).squeeze(
+                    1
+                )  # [ num_non_zero_pts ]
+                selected_cif_w_cumsum = cif_weight_cumsum[i, breaking_points_index]
+                shifted_selected_cif_w_cumsum = torch.nn.ConstantPad1d((1, 0), 0)(
+                    selected_cif_w_cumsum
+                )
+                extended_selected_cif_w_cumsum = torch.nn.ConstantPad1d((0, 1), 0)(
+                    selected_cif_w_cumsum
+                )
+                diff_selected_cif_w_cumsum = (
+                    extended_selected_cif_w_cumsum - shifted_selected_cif_w_cumsum
+                )[:-1]
+                per_utter_qtt_loss = torch.abs(1 - diff_selected_cif_w_cumsum).sum()
+                qtt_loss += per_utter_qtt_loss
+            # target_lengths_for_qtt_loss = (
+            #     y_lens.cuda() + 1
+            # )  # Lengths after adding eos token, [B]
+            # qtt_loss = torch.abs(quantity_out - target_lengths_for_qtt_loss).sum()
+
         # am_pruned : [B, T, prune_range, encoder_dim]
         # lm_pruned : [B, T, prune_range, decoder_dim]
         # am_pruned, lm_pruned = k2.do_rnnt_pruning(
@@ -304,7 +330,9 @@ class AsrModel(nn.Module):
         # project_input=False since we applied the decoder's input projections
         # prior to do_rnnt_pruning (this is an optimization for speed).
         # logits = self.joiner(am_pruned, lm_pruned, project_input=False)
-        logits = self.joiner(am, lm, project_input=False)
+        # print(cif_out.shape)
+        # print(y_padded.shape)
+        logits = self.joiner(cif_out, proj_lm, project_input=False)
 
         # with torch.cuda.amp.autocast(enabled=False):
         #     pruned_loss = k2.rnnt_loss_pruned(
@@ -315,16 +343,11 @@ class AsrModel(nn.Module):
         #         boundary=boundary,
         #         reduction="sum",
         #     )
-        # print(logits.shape)
-        # print(y_padded.shape)
-        # print(y_padded.pad(mode="constant", pad=(0, 1), padding_value=0))
-        # print(F.pad(y_padded, (0, 1), "constant", 0))
+
         ce_loss = self.ce_loss(
-            logits.permute(0, 2, 1), F.pad(y_padded, (0, 1), "constant", 0)
-        )
-        # print(ce_loss.shape)
-        # print(ce_loss)
-        # exit()
+            logits.view(-1, self.joiner.vocab_size),
+            F.pad(y_padded, (0, 1), "constant", 0).flatten(),
+        )  # B x T x vocab_size
 
         # return simple_loss, pruned_loss
         # return simple_loss, pruned_loss, qtt_loss

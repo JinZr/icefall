@@ -284,6 +284,7 @@ class CifMiddleware(nn.Module):
             "cif_out_padding_mask": cif_out_padding_mask,  # B x T_c
             "cif_out_lens": cif_out_lens,  # B
             "quantity_out": quantity_out,  # B
+            "cif_weight": weight,  # weight has shape B x T
         }
 
 
