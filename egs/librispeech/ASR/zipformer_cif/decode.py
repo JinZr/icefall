@@ -114,6 +114,7 @@ from beam_search import (
     fast_beam_search_one_best,
     greedy_search,
     greedy_search_batch,
+    deprecated_greedy_search_batch,
     modified_beam_search,
 )
 from train import add_model_arguments, get_params, get_model
@@ -432,7 +433,12 @@ def decode_one_batch(
         for hyp in sp.decode(hyp_tokens):
             hyps.append(hyp.split())
     elif params.decoding_method == "greedy_search" and params.max_sym_per_frame == 1:
-        hyp_tokens = greedy_search_batch(
+        # hyp_tokens = greedy_search_batch(
+        #     model=model,
+        #     encoder_out=encoder_out,
+        #     encoder_out_lens=encoder_out_lens,
+        # )
+        hyp_tokens = deprecated_greedy_search_batch(
             model=model,
             encoder_out=encoder_out,
             encoder_out_lens=encoder_out_lens,
