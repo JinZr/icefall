@@ -114,6 +114,7 @@ from beam_search import (
     fast_beam_search_one_best,
     greedy_search,
     greedy_search_batch,
+    greedy_search_batch_cif,
     deprecated_greedy_search_batch,
     modified_beam_search,
 )
@@ -445,7 +446,12 @@ def decode_one_batch(
         #     encoder_out=encoder_out,
         #     encoder_out_lens=encoder_out_lens,
         # )
-        hyp_tokens = deprecated_greedy_search_batch(
+        # hyp_tokens = deprecated_greedy_search_batch(
+        #     model=model,
+        #     encoder_out=encoder_out,
+        #     encoder_out_lens=encoder_out_lens,
+        # )
+        hyp_tokens = greedy_search_batch_cif(
             model=model,
             encoder_out=encoder_out,
             encoder_out_lens=encoder_out_lens,
