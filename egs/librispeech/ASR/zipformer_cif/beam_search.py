@@ -831,7 +831,8 @@ def deprecated_greedy_search_batch(
     # print(cif_out_padding_mask)
     # print(cif_out_padding_mask.shape)
     # print(cif_out.shape)
-    encoder_out = cif_out.masked_fill(cif_out_padding_mask.bool().unsqueeze(-1), 0)
+    encoder_out = cif_out.masked_fill(~cif_out_padding_mask.bool().unsqueeze(-1), 0)
+    # print(encoder_out)
     T = encoder_out.size(1)
     # print(encoder_out.shape)
 
