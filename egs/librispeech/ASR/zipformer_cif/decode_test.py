@@ -185,14 +185,14 @@ def get_parser():
     parser.add_argument(
         "--exp-dir",
         type=str,
-        default="zipformer_cif/exp",
+        default="zipformer/exp",
         help="The experiment dir",
     )
 
     parser.add_argument(
         "--bpe-model",
         type=str,
-        default="data_cif/lang_bpe_500/bpe.model",
+        default="data/lang_bpe_500/bpe.model",
         help="Path to the BPE model",
     )
 
@@ -304,13 +304,6 @@ def get_parser():
 
     parser.add_argument(
         "--use-quantity-loss",
-        type=str2bool,
-        default=True,
-        help="Whether to use quantity loss.",
-    )
-
-    parser.add_argument(
-        "--use-decoder-ce-loss",
         type=str2bool,
         default=True,
         help="Whether to use quantity loss.",
@@ -690,7 +683,7 @@ def main():
     sp.load(params.bpe_model)
 
     # <blk> and <unk> are defined in local/train_bpe_model.py
-    # params.blank_id = sp.piece_to_id("<blk>")
+    params.blank_id = sp.piece_to_id("<blk>")
     params.unk_id = sp.piece_to_id("<unk>")
     params.vocab_size = sp.get_piece_size()
 
@@ -803,13 +796,13 @@ def main():
     args.return_cuts = True
     librispeech = LibriSpeechAsrDataModule(args)
 
-    test_clean_cuts = librispeech.test_clean_cuts()
-    test_other_cuts = librispeech.test_other_cuts()
+    test_clean_cuts = librispeech.dev_clean_cuts()
+    test_other_cuts = librispeech.dev_other_cuts()
 
     test_clean_dl = librispeech.test_dataloaders(test_clean_cuts)
     test_other_dl = librispeech.test_dataloaders(test_other_cuts)
 
-    test_sets = ["test-clean", "test-other"]
+    test_sets = ["dev-clean", "dev-other"]
     test_dl = [test_clean_dl, test_other_dl]
 
     for test_set, test_dl in zip(test_sets, test_dl):

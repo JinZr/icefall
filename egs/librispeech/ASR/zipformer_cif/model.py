@@ -43,6 +43,7 @@ class AsrModel(nn.Module):
         use_transducer: bool = True,
         use_ctc: bool = False,
         use_quantity_loss: bool = True,
+        use_decoder_ce_loss: bool = False,
     ):
         """A joint CTC & Transducer ASR model.
 
@@ -97,7 +98,6 @@ class AsrModel(nn.Module):
         if use_transducer:
             # Modules for Transducer head
             assert decoder is not None
-            assert hasattr(decoder, "blank_id")
             assert joiner is not None
 
             self.decoder = decoder
@@ -119,6 +119,13 @@ class AsrModel(nn.Module):
             self.ctc_output = nn.Sequential(
                 nn.Dropout(p=0.1),
                 nn.Linear(encoder_dim, vocab_size),
+                nn.LogSoftmax(dim=-1),
+            )
+        self.use_decoder_ce_loss = use_decoder_ce_loss
+        if use_decoder_ce_loss:
+            self.decoder_ce_output = nn.Sequential(
+                nn.Dropout(p=0.1),
+                nn.Linear(decoder_dim, vocab_size),
                 nn.LogSoftmax(dim=-1),
             )
 
@@ -211,15 +218,14 @@ class AsrModel(nn.Module):
             The scale to smooth the loss with lm (output of predictor network)
             part
         """
-        blank_id = self.decoder.blank_id
-        sos_y = add_sos(y, sos_id=blank_id)
+        sos_y = add_sos(y, sos_id=0)
 
         # sos_y_padded: [B, S + 1], start with SOS.
-        sos_y_padded = sos_y.pad(mode="constant", padding_value=blank_id)
+        sos_y_padded = sos_y.pad(mode="constant", padding_value=0)
 
         # decoder_out: [B, S + 1, decoder_dim]
         decoder_out = self.decoder(sos_y_padded)
-
+        
         # Note: y does not start with SOS
         # y_padded : [B, S]
         y_padded = y.pad(mode="constant", padding_value=0)
@@ -232,6 +238,15 @@ class AsrModel(nn.Module):
         )
         boundary[:, 2] = y_lens
         boundary[:, 3] = encoder_out_lens
+        
+        decoder_ce_loss = torch.tensor(0.0).cuda()
+        if self.use_decoder_ce_loss:
+            decoder_ce_output = self.decoder_ce_output(decoder_out)
+            decoder_ce_loss = self.ce_loss(
+                decoder_ce_output.view(-1, self.joiner.vocab_size),
+                F.pad(y_padded, (0, 1), "constant", 0).flatten(),
+            )
+
 
         lm = self.simple_lm_proj(decoder_out)
         am = self.simple_am_proj(encoder_out)
@@ -246,7 +261,7 @@ class AsrModel(nn.Module):
                 lm=lm.float(),
                 am=am.float(),
                 symbols=y_padded,
-                termination_symbol=blank_id,
+                termination_symbol=0,
                 lm_only_scale=lm_scale,
                 am_only_scale=am_scale,
                 boundary=boundary,
@@ -276,8 +291,6 @@ class AsrModel(nn.Module):
             cif_out_dict["quantity_out"],
             cif_out_dict["cif_weight"],
         )
-        print(cif_out_padding_mask.shape)
-        print(cif_out_padding_mask.sum(-1))
 
         expanded_ranges = nn.ZeroPad2d(padding=(0, 0, 0, 1))(ranges)
         shifted_ranges = nn.ZeroPad2d(padding=(0, 0, 1, 0))(ranges)
@@ -351,7 +364,7 @@ class AsrModel(nn.Module):
 
         # return simple_loss, pruned_loss
         # return simple_loss, pruned_loss, qtt_loss
-        return ce_loss, qtt_loss
+        return simple_loss, decoder_ce_loss, ce_loss, qtt_loss
 
     def forward(
         self,
@@ -423,7 +436,7 @@ class AsrModel(nn.Module):
             #     am_scale=am_scale,
             #     lm_scale=lm_scale,
             # )
-            ce_loss, qtt_loss = self.forward_transducer(
+            simple_loss, decoder_ce_loss, ce_loss, qtt_loss = self.forward_transducer(
                 encoder_out=encoder_out,
                 encoder_out_lens=encoder_out_lens,
                 y=y.to(x.device),
@@ -433,8 +446,9 @@ class AsrModel(nn.Module):
                 lm_scale=lm_scale,
             )
         else:
-            simple_loss = torch.empty(0)
+            qtt_loss = torch.empty(0)
             ce_loss = torch.empty(0)
+            decoder_ce_loss = torch.empty(0)
 
         if self.use_ctc:
             # Compute CTC loss
@@ -448,4 +462,5 @@ class AsrModel(nn.Module):
         else:
             ctc_loss = torch.empty(0)
 
-        return ce_loss, ctc_loss, qtt_loss
+
+        return simple_loss, decoder_ce_loss, ce_loss, ctc_loss, qtt_loss

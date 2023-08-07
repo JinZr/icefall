@@ -38,7 +38,6 @@ class Decoder(nn.Module):
         self,
         vocab_size: int,
         decoder_dim: int,
-        blank_id: int,
         context_size: int,
     ):
         """
@@ -47,8 +46,6 @@ class Decoder(nn.Module):
             Number of tokens of the modeling unit including blank.
           decoder_dim:
             Dimension of the input embedding, and of the decoder output.
-          blank_id:
-            The ID of the blank symbol.
           context_size:
             Number of previous words to use to predict the next word.
             1 means bigram; 2 means trigram. n means (n+1)-gram.
@@ -61,12 +58,15 @@ class Decoder(nn.Module):
         )
         # the balancers are to avoid any drift in the magnitude of the
         # embeddings, which would interact badly with parameter averaging.
-        self.balancer = Balancer(decoder_dim, channel_dim=-1,
-                                 min_positive=0.0, max_positive=1.0,
-                                 min_abs=0.5, max_abs=1.0,
-                                 prob=0.05)
-
-        self.blank_id = blank_id
+        self.balancer = Balancer(
+            decoder_dim,
+            channel_dim=-1,
+            min_positive=0.0,
+            max_positive=1.0,
+            min_abs=0.5,
+            max_abs=1.0,
+            prob=0.05,
+        )
 
         assert context_size >= 1, context_size
         self.context_size = context_size
@@ -81,10 +81,15 @@ class Decoder(nn.Module):
                 groups=decoder_dim // 4,  # group size == 4
                 bias=False,
             )
-            self.balancer2 = Balancer(decoder_dim, channel_dim=-1,
-                                      min_positive=0.0, max_positive=1.0,
-                                      min_abs=0.5, max_abs=1.0,
-                                      prob=0.05)
+            self.balancer2 = Balancer(
+                decoder_dim,
+                channel_dim=-1,
+                min_positive=0.0,
+                max_positive=1.0,
+                min_abs=0.5,
+                max_abs=1.0,
+                prob=0.05,
+            )
 
     def forward(self, y: torch.Tensor, need_pad: bool = True) -> torch.Tensor:
         """
@@ -107,9 +112,7 @@ class Decoder(nn.Module):
         if self.context_size > 1:
             embedding_out = embedding_out.permute(0, 2, 1)
             if need_pad is True:
-                embedding_out = F.pad(
-                    embedding_out, pad=(self.context_size - 1, 0)
-                )
+                embedding_out = F.pad(embedding_out, pad=(self.context_size - 1, 0))
             else:
                 # During inference time, there is no need to do extra padding
                 # as we only need one output

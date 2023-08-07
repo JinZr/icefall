@@ -325,7 +325,7 @@ def get_parser():
     parser.add_argument(
         "--bpe-model",
         type=str,
-        default="data/lang_bpe_500/bpe.model",
+        default="data_cif/lang_bpe_500/bpe.model",
         help="Path to the BPE model",
     )
 
@@ -476,6 +476,13 @@ def get_parser():
         help="Whether to use quantity loss.",
     )
 
+    parser.add_argument(
+        "--use-decoder-ce-loss",
+        type=str2bool,
+        default=True,
+        help="Whether to use quantity loss.",
+    )
+
     add_model_arguments(parser)
 
     return parser
@@ -595,7 +602,6 @@ def get_decoder_model(params: AttributeDict) -> nn.Module:
     decoder = Decoder(
         vocab_size=params.vocab_size,
         decoder_dim=params.decoder_dim,
-        blank_id=params.blank_id,
         context_size=params.context_size,
     )
     return decoder
@@ -646,6 +652,7 @@ def get_model(params: AttributeDict) -> nn.Module:
         use_transducer=params.use_transducer,
         use_ctc=params.use_ctc,
         use_quantity_loss=params.use_quantity_loss,
+        use_decoder_ce_loss=params.use_decoder_ce_loss,
     )
     return model
 
@@ -808,7 +815,7 @@ def compute_loss(
     y = k2.RaggedTensor(y)
 
     with torch.set_grad_enabled(is_training):
-        ce_loss, ctc_loss, qtt_loss = model(
+        simple_loss, decoder_ce_loss, ce_loss, ctc_loss, qtt_loss = model(
             x=feature,
             x_lens=feature_lens,
             y=y,
@@ -820,14 +827,14 @@ def compute_loss(
         loss = 0.0
 
         if params.use_transducer:
-            # s = params.simple_loss_scale
+            s = params.simple_loss_scale
             # # take down the scale on the simple loss from 1.0 at the start
             # # to params.simple_loss scale by warm_step.
-            # simple_loss_scale = (
-            #     s
-            #     if batch_idx_train >= warm_step
-            #     else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
-            # )
+            simple_loss_scale = (
+                s
+                if batch_idx_train >= warm_step
+                else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
+            )
             # pruned_loss_scale = (
             #     1.0
             #     if batch_idx_train >= warm_step
@@ -836,11 +843,7 @@ def compute_loss(
             # loss += (
             #     simple_loss_scale * simple_loss + pruned_loss_scale * ce_loss + qtt_loss
             # )
-            loss += ce_loss.cuda() + ctc_loss.cuda() + qtt_loss.cuda()
-            # print(ctc_loss.shape)
-            # print(qtt_loss.shape)
-            # print(ctc_loss)
-            # print(qtt_loss)
+            loss += simple_loss_scale * simple_loss.cuda() + decoder_ce_loss.cuda() + ce_loss.cuda() + qtt_loss.cuda()
 
         if params.use_ctc:
             loss += params.ctc_loss_scale * ctc_loss + qtt_loss
@@ -855,7 +858,8 @@ def compute_loss(
     # Note: We use reduction=sum while computing the loss.
     info["loss"] = loss.detach().cpu().item()
     if params.use_transducer:
-        info["ctc_loss"] = ctc_loss.detach().cpu().item()
+        info["simple_loss"] = simple_loss.detach().cpu().item()
+        info["decoder_ce_loss"] = decoder_ce_loss.detach().cpu().item()
         info["ce_loss"] = ce_loss.detach().cpu().item()
         info["qtt_loss"] = qtt_loss.detach().cpu().item()
     if params.use_ctc:
@@ -1139,8 +1143,8 @@ def run(rank, world_size, args):
     sp.load(params.bpe_model)
 
     # <blk> is defined in local/train_bpe_model.py
-    params.blank_id = sp.piece_to_id("<blk>")
     params.vocab_size = sp.get_piece_size()
+    assert params.vocab_size == 500, params.vocab_size
 
     if not params.use_transducer:
         params.ctc_loss_scale = 1.0

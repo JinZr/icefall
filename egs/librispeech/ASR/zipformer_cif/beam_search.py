@@ -801,13 +801,13 @@ def deprecated_greedy_search_batch(
     device = next(model.parameters()).device
 
     batch_size = encoder_out.size(0)
-    T = encoder_out.size(1)
 
-    blank_id = model.decoder.blank_id
-    unk_id = getattr(model, "unk_id", blank_id)
+    # blank_id = model.decoder.blank_id
+    # unk_id = getattr(model, "unk_id", blank_id)
+    unk_id = 0
     context_size = model.decoder.context_size
 
-    hyps = [[-1] * (context_size - 1) + [blank_id] for _ in range(batch_size)]
+    hyps = [[-1] * (context_size - 1) + [1] for _ in range(batch_size)]
 
     decoder_input = torch.tensor(
         hyps,
@@ -818,6 +818,7 @@ def deprecated_greedy_search_batch(
     decoder_out = model.decoder(decoder_input, need_pad=False)
     decoder_out = model.joiner.decoder_proj(decoder_out)
     encoder_out = model.joiner.encoder_proj(encoder_out)
+    # print(encoder_out.shape)
 
     cif_out_dict = model.cif(encoder_out, make_pad_mask(encoder_out_lens), None)
     cif_out, cif_out_padding_mask, cif_out_lens, quantity_out, cif_weight = (
@@ -827,7 +828,12 @@ def deprecated_greedy_search_batch(
         cif_out_dict["quantity_out"],
         cif_out_dict["cif_weight"],
     )
-    encoder_out = cif_out
+    # print(cif_out_padding_mask)
+    # print(cif_out_padding_mask.shape)
+    # print(cif_out.shape)
+    encoder_out = cif_out.masked_fill(cif_out_padding_mask.bool().unsqueeze(-1), 0)
+    T = encoder_out.size(1)
+    # print(encoder_out.shape)
 
     # decoder_out: (batch_size, 1, decoder_out_dim)
     for t in range(T):
@@ -844,11 +850,11 @@ def deprecated_greedy_search_batch(
         logits = logits.squeeze(1).squeeze(1)  # (batch_size, vocab_size)
         assert logits.ndim == 2, logits.shape
         y = logits.argmax(dim=1).tolist()
-        emitted = True
-        # for i, v in enumerate(y):
-        #     if v not in (blank_id, unk_id):
-        #         hyps[i].append(v)
-        #         emitted = True
+        emitted = False
+        for i, v in enumerate(y):
+            if v not in (unk_id, 0):
+                hyps[i].append(v)
+                emitted = True
         if emitted:
             # update decoder output
             decoder_input = [h[-context_size:] for h in hyps]
