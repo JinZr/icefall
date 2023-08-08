@@ -822,6 +822,7 @@ def compute_loss(
             prune_range=params.prune_range,
             am_scale=params.am_scale,
             lm_scale=params.lm_scale,
+            is_validation=not is_training,
         )
 
         loss = 0.0
@@ -843,7 +844,12 @@ def compute_loss(
             # loss += (
             #     simple_loss_scale * simple_loss + pruned_loss_scale * ce_loss + qtt_loss
             # )
-            loss += simple_loss_scale * simple_loss.cuda() + decoder_ce_loss.cuda() + ce_loss.cuda() + qtt_loss.cuda()
+            loss += (
+                simple_loss_scale * simple_loss.cuda()
+                + decoder_ce_loss.cuda()
+                + ce_loss.cuda()
+                + qtt_loss.cuda()
+            )
 
         if params.use_ctc:
             loss += params.ctc_loss_scale * ctc_loss + qtt_loss

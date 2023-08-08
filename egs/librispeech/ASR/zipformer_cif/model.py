@@ -198,6 +198,7 @@ class AsrModel(nn.Module):
         prune_range: int = 2,
         am_scale: float = 0.0,
         lm_scale: float = 0.0,
+        is_validation: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute Transducer loss.
         Args:
@@ -225,7 +226,7 @@ class AsrModel(nn.Module):
 
         # decoder_out: [B, S + 1, decoder_dim]
         decoder_out = self.decoder(sos_y_padded)
-        
+
         # Note: y does not start with SOS
         # y_padded : [B, S]
         y_padded = y.pad(mode="constant", padding_value=0)
@@ -238,7 +239,7 @@ class AsrModel(nn.Module):
         )
         boundary[:, 2] = y_lens
         boundary[:, 3] = encoder_out_lens
-        
+
         decoder_ce_loss = torch.tensor(0.0).cuda()
         if self.use_decoder_ce_loss:
             decoder_ce_output = self.decoder_ce_output(decoder_out)
@@ -246,7 +247,6 @@ class AsrModel(nn.Module):
                 decoder_ce_output.view(-1, self.joiner.vocab_size),
                 F.pad(y_padded, (0, 1), "constant", 0).flatten(),
             )
-
 
         lm = self.simple_lm_proj(decoder_out)
         am = self.simple_am_proj(encoder_out)
@@ -279,9 +279,11 @@ class AsrModel(nn.Module):
 
         proj_am = self.joiner.encoder_proj(encoder_out)
         proj_lm = self.joiner.decoder_proj(decoder_out)
-
         cif_out_dict = self.cif(
-            proj_am, make_pad_mask(encoder_out_lens), y_lens.cuda() + 1
+            proj_am,
+            make_pad_mask(encoder_out_lens),
+            y_lens.cuda() + 1 if not is_validation else y_lens.cuda(),
+            is_validating=is_validation,
         )
         # print(y_lens)
         cif_out, cif_out_padding_mask, cif_out_lens, quantity_out, cif_weight = (
@@ -374,6 +376,7 @@ class AsrModel(nn.Module):
         prune_range: int = 5,
         am_scale: float = 0.0,
         lm_scale: float = 0.0,
+        is_validation: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Args:
@@ -444,6 +447,7 @@ class AsrModel(nn.Module):
                 prune_range=prune_range,
                 am_scale=am_scale,
                 lm_scale=lm_scale,
+                is_validation=False,
             )
         else:
             qtt_loss = torch.empty(0)
@@ -461,6 +465,5 @@ class AsrModel(nn.Module):
             )
         else:
             ctc_loss = torch.empty(0)
-
 
         return simple_loss, decoder_ce_loss, ce_loss, ctc_loss, qtt_loss

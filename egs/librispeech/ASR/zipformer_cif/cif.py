@@ -57,7 +57,13 @@ class CifMiddleware(nn.Module):
                 self.encoder_embed_dim, self.cif_output_dim, bias=False
             ).cuda()
 
-    def forward(self, encoder_outputs, encoder_padding_mask, target_lengths):
+    def forward(
+        self,
+        encoder_outputs,
+        encoder_padding_mask,
+        target_lengths,
+        is_validating: bool = False,
+    ):
         """
         Args:
             encoder_outputs: a dictionary that includes
@@ -106,7 +112,11 @@ class CifMiddleware(nn.Module):
         org_weight = weight
 
         # Apply scaling strategies
-        if self.training and self.apply_scaling and target_lengths is not None:
+        if (
+            (self.training or is_validating)
+            and self.apply_scaling
+            and target_lengths is not None
+        ):
             # Conduct scaling when training
             weight_sum = weight.sum(-1)  # weight_sum has shape B
             normalize_scalar = torch.unsqueeze(
@@ -178,7 +188,7 @@ class CifMiddleware(nn.Module):
             )  # B x C
 
             # Handle the tail
-            if (not self.training) and self.apply_tail_handling:
+            if (not self.training or not is_validating) and self.apply_tail_handling:
                 # When encoder output position exceeds the max valid position,
                 # if accumulated weights is greater than tail_handling_firing_threshold,
                 # current state should be reserved, otherwise it is discarded.
@@ -271,7 +281,7 @@ class CifMiddleware(nn.Module):
 
         cif_out_lens = cif_out_padding_mask.sum(-1)
 
-        if self.training:
+        if self.training or is_validating:
             quantity_out = org_weight.sum(-1)
         else:
             quantity_out = weight.sum(-1)
