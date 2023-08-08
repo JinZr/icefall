@@ -16,6 +16,8 @@
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 from scaling import ScaledLinear
 
 
@@ -62,8 +64,12 @@ class Joiner(nn.Module):
         if project_input:
             logit = self.encoder_proj(encoder_out) + self.decoder_proj(decoder_out)
         else:
-            # print(encoder_out.shape)
-            # print(decoder_out.shape)
+            _, enc_len, _ = encoder_out.shape
+            _, dec_len, _ = decoder_out.shape
+            if enc_len > dec_len:
+                encoder_out = encoder_out[:, :dec_len, :]
+            elif enc_len < dec_len:
+                encoder_out = F.pad(encoder_out, (0, 1), "constant", 0)
             logit = encoder_out + decoder_out
 
         logit = self.output_linear(torch.tanh(logit))
