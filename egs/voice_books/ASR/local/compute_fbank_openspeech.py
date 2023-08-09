@@ -55,7 +55,7 @@ torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
 
 
-def compute_fbank_timit():
+def compute_fbank_openspeech():
     src_dir = Path("data/manifests")
     num_jobs = min(15, os.cpu_count())
     num_mel_bins = 80
@@ -64,7 +64,7 @@ def compute_fbank_timit():
     prefix = "openspeech"
     suffix = "jsonl.gz"
 
-    num_splits = 50
+    num_splits = 200
     start = 0
     stop = num_splits
     output_dir = f"data/fbank/split_{num_splits}"
@@ -108,7 +108,7 @@ def compute_fbank_timit():
                             start=cut.supervisions[0].start,
                             duration=cut.supervisions[0].duration,
                             channel=cut.supervisions[0].channel,
-                            text=cut.supervisions[0].custom["texts"][0],
+                            text=cut.supervisions[0].custom["texts"][1],
                         )
                     ],
                     recording=cut.recording,
@@ -124,7 +124,7 @@ def compute_fbank_timit():
 
         cut_set = cut_set.compute_and_store_features_batch(
             extractor=extractor,
-            storage_path=f"{output_dir}/{prefix}_feats_{subset}",
+            storage_path=f"{output_dir}/{prefix}_feats_{subset}_{idx}",
             # when an executor is specified, make more partitions
             num_workers=20,
             storage_type=LilcomChunkyWriter,
@@ -133,9 +133,13 @@ def compute_fbank_timit():
         cut_set.to_file(cuts_path)
 
 
+def normalize_text(line: str) -> str:
+    line = line.replace()
+
+
 if __name__ == "__main__":
     formatter = "%(asctime)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s"
 
     logging.basicConfig(format=formatter, level=logging.INFO)
 
-    compute_fbank_timit()
+    compute_fbank_openspeech()

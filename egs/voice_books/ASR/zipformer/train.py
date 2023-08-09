@@ -28,7 +28,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
   --num-epochs 12 \
   --start-epoch 1 \
   --exp-dir zipformer/exp \
-  --training-subset L
+  --training-subset part1
   --lr-epochs 1.5 \
   --max-duration 350
 
@@ -40,7 +40,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
   --start-epoch 1 \
   --use-fp16 1 \
   --exp-dir zipformer/exp \
-  --training-subset L \
+  --training-subset part1 \
   --lr-epochs 1.5 \
   --max-duration 750
 
@@ -60,7 +60,7 @@ import optim
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
-from asr_datamodule import WenetSpeechAsrDataModule
+from asr_datamodule import OpenSpeechAsrDataModule
 from decoder import Decoder
 from joiner import Joiner
 from lhotse.cut import Cut
@@ -1135,10 +1135,10 @@ def run(rank, world_size, args):
     if params.inf_check:
         register_inf_check_hooks(model)
 
-    wenetspeech = WenetSpeechAsrDataModule(args)
+    openspeech = OpenSpeechAsrDataModule(args)
 
-    train_cuts = wenetspeech.train_cuts()
-    valid_cuts = wenetspeech.valid_cuts()
+    train_cuts = openspeech.train_cuts()
+    valid_cuts = openspeech.valid_cuts()
 
     def remove_short_and_long_utt(c: Cut):
         # Keep only utterances with duration between 1 second and 15 seconds
@@ -1149,7 +1149,7 @@ def run(rank, world_size, args):
         # You should use ../local/display_manifest_statistics.py to get
         # an utterance duration distribution for your dataset to select
         # the threshold
-        if c.duration < 1.0 or c.duration > 15.0:
+        if c.duration < 1.0 or c.duration > 35.0:
             # logging.warning(
             #    f"Exclude cut with ID {c.id} from training. Duration: {c.duration}"
             # )
@@ -1186,20 +1186,20 @@ def run(rank, world_size, args):
     else:
         sampler_state_dict = None
 
-    train_dl = wenetspeech.train_dataloaders(
+    train_dl = openspeech.train_dataloaders(
         train_cuts, sampler_state_dict=sampler_state_dict
     )
 
-    valid_dl = wenetspeech.valid_dataloaders(valid_cuts)
+    valid_dl = openspeech.valid_dataloaders(valid_cuts)
 
-    if False and not params.print_diagnostics:
-        scan_pessimistic_batches_for_oom(
-            model=model,
-            train_dl=train_dl,
-            optimizer=optimizer,
-            graph_compiler=graph_compiler,
-            params=params,
-        )
+    # if False and not params.print_diagnostics:
+    #     scan_pessimistic_batches_for_oom(
+    #         model=model,
+    #         train_dl=train_dl,
+    #         optimizer=optimizer,
+    #         graph_compiler=graph_compiler,
+    #         params=params,
+    #     )
 
     scaler = GradScaler(enabled=params.use_fp16, init_scale=1.0)
     if checkpoints and "grad_scaler" in checkpoints:
@@ -1330,7 +1330,7 @@ def scan_pessimistic_batches_for_oom(
 
 def main():
     parser = get_parser()
-    WenetSpeechAsrDataModule.add_arguments(parser)
+    OpenSpeechAsrDataModule.add_arguments(parser)
     args = parser.parse_args()
     args.lang_dir = Path(args.lang_dir)
     args.exp_dir = Path(args.exp_dir)

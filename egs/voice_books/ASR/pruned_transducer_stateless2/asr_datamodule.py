@@ -55,7 +55,7 @@ class _SeedWorkers:
         fix_random_seed(self.seed + worker_id)
 
 
-class WenetSpeechAsrDataModule:
+class OpenSpeechAsrDataModule:
     """
     DataModule for k2 ASR experiments.
     It assumes there is always one train and valid dataloader,
@@ -192,7 +192,7 @@ class WenetSpeechAsrDataModule:
         group.add_argument(
             "--training-subset",
             type=str,
-            default="L",
+            default="part1",
             help="The training subset for using",
         )
 
@@ -389,7 +389,8 @@ class WenetSpeechAsrDataModule:
     def train_cuts(self) -> CutSet:
         logging.info("About to get train cuts")
         cuts_train = load_manifest_lazy(
-            self.args.manifest_dir / f"cuts_{self.args.training_subset}.jsonl.gz"
+            self.args.manifest_dir
+            / f"openspeech_cuts_{self.args.training_subset}.jsonl.gz"
         )
         return cuts_train
 
