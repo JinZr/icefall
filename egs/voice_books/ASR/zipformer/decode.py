@@ -119,6 +119,9 @@ from icefall.utils import (
     write_error_stats,
 )
 
+from multi_dataset import MultiDataset
+
+
 LOG_EPS = math.log(1e-10)
 
 
@@ -771,6 +774,7 @@ def main():
     # we need cut ids to display recognition results.
     args.return_cuts = True
     openspeech = OpenSpeechAsrDataModule(args)
+    multi_dataset = MultiDataset(args.manifest_dir)
 
     def remove_short_utt(c: Cut):
         T = ((c.num_frames - 7) // 2 + 1) // 2
@@ -780,22 +784,17 @@ def main():
             )
         return T > 0
 
-    dev_cuts = openspeech.valid_cuts()
-    dev_cuts = dev_cuts.filter(remove_short_utt)
-    dev_dl = openspeech.valid_dataloaders(dev_cuts)
+    test_sets_cuts = multi_dataset.test_cuts()
 
-    test_net_cuts = openspeech.test_net_cuts()
-    test_net_cuts = test_net_cuts.filter(remove_short_utt)
-    test_net_dl = openspeech.test_dataloaders(test_net_cuts)
-
-    test_meeting_cuts = openspeech.test_meeting_cuts()
-    test_meeting_cuts = test_meeting_cuts.filter(remove_short_utt)
-    test_meeting_dl = openspeech.test_dataloaders(test_meeting_cuts)
-
-    test_sets = ["DEV", "TEST_NET", "TEST_MEETING"]
-    test_dls = [dev_dl, test_net_dl, test_meeting_dl]
+    test_sets = test_sets_cuts.keys()
+    test_dls = [
+        openspeech.test_dataloaders(test_sets_cuts[cuts_name].filter(remove_short_utt))
+        for cuts_name in test_sets
+    ]
 
     for test_set, test_dl in zip(test_sets, test_dls):
+        logging.info(f"Start decoding test set: {test_set}")
+
         results_dict = decode_dataset(
             dl=test_dl,
             params=params,
@@ -810,6 +809,37 @@ def main():
             test_set_name=test_set,
             results_dict=results_dict,
         )
+
+    # dev_cuts = openspeech.valid_cuts()
+    # dev_cuts = dev_cuts.filter(remove_short_utt)
+    # dev_dl = openspeech.valid_dataloaders(dev_cuts)
+
+    # test_net_cuts = openspeech.test_net_cuts()
+    # test_net_cuts = test_net_cuts.filter(remove_short_utt)
+    # test_net_dl = openspeech.test_dataloaders(test_net_cuts)
+
+    # test_meeting_cuts = openspeech.test_meeting_cuts()
+    # test_meeting_cuts = test_meeting_cuts.filter(remove_short_utt)
+    # test_meeting_dl = openspeech.test_dataloaders(test_meeting_cuts)
+
+    # test_sets = ["DEV", "TEST_NET", "TEST_MEETING"]
+    # test_dls = [dev_dl, test_net_dl, test_meeting_dl]
+
+    # for test_set, test_dl in zip(test_sets, test_dls):
+    #     results_dict = decode_dataset(
+    #         dl=test_dl,
+    #         params=params,
+    #         model=model,
+    #         lexicon=lexicon,
+    #         graph_compiler=graph_compiler,
+    #         decoding_graph=decoding_graph,
+    #     )
+
+    #     save_results(
+    #         params=params,
+    #         test_set_name=test_set,
+    #         results_dict=results_dict,
+    #     )
 
     logging.info("Done!")
 
