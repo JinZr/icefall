@@ -24,7 +24,7 @@ import torch.nn as nn
 from encoder_interface import EncoderInterface
 from scaling import ScaledLinear
 
-from icefall.utils import add_sos, make_pad_mask, AttributeDict
+from icefall.utils import AttributeDict, add_sos, make_pad_mask
 
 
 class AsrModel(nn.Module):
@@ -235,6 +235,12 @@ class AsrModel(nn.Module):
         #    lm = penalize_abs_values_gt(lm, 100.0, 1.0e-04)
         # if self.training and random.random() < 0.25:
         #    am = penalize_abs_values_gt(am, 30.0, 1.0e-04)
+
+        attn_encoder_out = self.joiner.label_level_am_attention(
+            encoder_out,
+            decoder_out,
+            encoder_out_lens,
+        )
 
         with torch.cuda.amp.autocast(enabled=False):
             simple_loss, (px_grad, py_grad) = k2.rnnt_loss_smoothed(

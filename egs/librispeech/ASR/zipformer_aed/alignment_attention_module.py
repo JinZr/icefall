@@ -17,6 +17,7 @@ from scaling import (
 )
 from torch import Tensor, nn
 from zipformer import CompactRelPositionalEncoding, _whitening_schedule
+
 from icefall.utils import make_pad_mask
 
 
@@ -607,8 +608,8 @@ if __name__ == "__main__":
     print("__main__ === for training ===")
     # am_pruned : [B, T, prune_range, encoder_dim]
     # lm_pruned : [B, T, prune_range, decoder_dim]
-    am_pruned = torch.rand(2, 100, 5, 512)
-    lm_pruned = torch.rand(2, 100, 5, 512)
+    am_pruned = torch.rand(2, 100, 512)
+    lm_pruned = torch.rand(2, 100, 512)
     lengths = Tensor([100, 100])
     res = attn(am_pruned, lm_pruned, lengths)
     print("__main__ res", res.shape)
