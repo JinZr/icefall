@@ -189,7 +189,7 @@ def get_parser():
     parser.add_argument(
         "--exp-dir",
         type=str,
-        default="zipformer/exp",
+        default="zipformer_bypass/exp",
         help="The experiment dir",
     )
 

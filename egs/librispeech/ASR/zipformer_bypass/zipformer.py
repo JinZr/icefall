@@ -328,15 +328,22 @@ class Zipformer2(EncoderInterface):
             ds = self.downsampling_factor[i]
             x = convert_num_channels(x, self.encoder_dim[i])
 
+            # x = module(
+            #     x,
+            #     chunk_size=chunk_size,
+            #     feature_mask=feature_masks[i],
+            #     src_key_padding_mask=(
+            #         None
+            #         if src_key_padding_mask is None
+            #         else src_key_padding_mask[..., ::ds]
+            #     ),
+            #     attn_mask=attn_mask,
+            # )
             x = module(
                 x,
                 chunk_size=chunk_size,
                 feature_mask=feature_masks[i],
-                src_key_padding_mask=(
-                    None
-                    if src_key_padding_mask is None
-                    else src_key_padding_mask[..., ::ds]
-                ),
+                src_key_padding_mask=src_key_padding_mask,
                 attn_mask=attn_mask,
             )
             outputs.append(x)
@@ -957,7 +964,7 @@ class Zipformer2EncoderLayer(nn.Module):
         src = src + self.feed_forward2(src)
 
         # bypass in the middle of the layer.
-        src = self.bypass_mid(src_orig, src. src_key_padding_mask)
+        src = self.bypass_mid(src_orig, src.src_key_padding_mask)
 
         self_attn, cached_val2 = self.self_attn2.streaming_forward(
             src,
@@ -1253,19 +1260,23 @@ class DownsampledZipformer2Encoder(nn.Module):
         ds = self.downsample_factor
         if attn_mask is not None:
             attn_mask = attn_mask[::ds, ::ds]
+        if src_key_padding_mask is not None:
+            ds_src_key_padding_mask = src_key_padding_mask[..., ::ds]
+        else:
+            ds_src_key_padding_mask = src_key_padding_mask
 
         src = self.encoder(
             src,
             chunk_size=chunk_size // ds,
             feature_mask=feature_mask,
             attn_mask=attn_mask,
-            src_key_padding_mask=src_key_padding_mask,
+            src_key_padding_mask=ds_src_key_padding_mask,
         )
         src = self.upsample(src)
         # remove any extra frames that are not a multiple of downsample_factor
         src = src[: src_orig.shape[0]]
 
-        return self.out_combiner(src_orig, src)
+        return self.out_combiner(src_orig, src, src_key_padding_mask)
 
     def streaming_forward(
         self,

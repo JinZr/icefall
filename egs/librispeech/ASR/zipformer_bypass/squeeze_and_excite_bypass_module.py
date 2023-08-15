@@ -47,18 +47,17 @@ class PoolingModule(nn.Module):
             pooling_mask = pooling_mask / pooling_mask.sum(dim=1, keepdim=True)
             pooling_mask = pooling_mask.transpose(0, 1).contiguous().unsqueeze(-1)
             # now pooling_mask: (T, N, 1)
-            x = (x * pooling_mask).sum(dim=0, keepdim=True).sum(dim=1, keepdim=True)
+            x = (x * pooling_mask).sum(dim=0, keepdim=True)
         else:
             num_frames = x.shape[0]
             pooling_mask = 1.0 / num_frames
-            x = (x * pooling_mask).sum(dim=0, keepdim=True).sum(dim=1, keepdim=True)
-
+            x = (x * pooling_mask).sum(dim=0, keepdim=True)
         x = self.proj(x)
         return x
 
 
 class SqueezeAndExciteBypassModule(nn.Module):
-    """
+    """[]
     An nn.Module that implements a learnable bypass scale, and also randomized per-sequence
     layer-skipping.  The bypass is limited during early stages of training to be close to
     "straight-through", i.e. to not do the bypass operation much initially, in order to
@@ -92,14 +91,14 @@ class SqueezeAndExciteBypassModule(nn.Module):
             bottleneck_dim,
             channel_dim=-1,
             min_positive=0.2,
-            max_positive=0.5,
             max_abs=10.0,
         )
         self.swooshr = SwooshR()
         self.dropout = Dropout2(ScheduledFloat((0.0, 0.5), (10000.0, 0.1)))
         self.back_proj = nn.Linear(bottleneck_dim, embed_dim)
+        self.sigmoid = nn.Sigmoid()
 
-    def _get_bypass_scale(self, bypass_scale: Tensor, batch_size: int):
+    def _limit_and_perturb_bypass_scale(self, bypass_scale: Tensor, batch_size: int):
         # returns bypass-scale of shape (num_channels,),
         # or (batch_size, num_channels,).  This is actually the
         # scale on the non-residual term, so 0 correponds to bypassing
@@ -126,36 +125,32 @@ class SqueezeAndExciteBypassModule(nn.Module):
             return ans
 
     def forward(
-        self, src_orig: Tensor, src: Tensor, key_padding_mask: Optional[Tensor] = None
+        self,
+        src_orig: Tensor,
+        src: Tensor,
+        key_padding_mask: Optional[Tensor] = None,
+        chunk_size: int = -1,
     ):
         """
         Args: src_orig and src are both of shape (seq_len, batch_size, num_channels)
         Returns: something with the same shape as src and src_orig
         """
-
-        src_pool = (
-            self.average_pooling(src.permute(1, 0, 2), key_padding_mask)
-            .permute(1, 0, 2)
-            .squeeze(1)
-            .squeeze(0)
-        )
-        # print("self.average_pooling(src_orig, key_padding_mask)", src_pool.shape)
+        src_pool = self.average_pooling(src, key_padding_mask).squeeze(0)
         src_pool = self.balancer(src_pool)
         src_pool = self.swooshr(src_pool)
         src_pool = self.dropout(src_pool)
-        src_pool = torch.sigmoid(self.back_proj(src_pool))
-        # print("torch.sigmoid(self.back_proj(src_pool))", src_pool.shape)
+        src_pool = self.sigmoid(self.back_proj(src_pool))
 
-        bypass_scale = self._get_bypass_scale(
+        bypass_scale = self._limit_and_perturb_bypass_scale(
             bypass_scale=src_pool, batch_size=src.shape[1]
-        )
+        ).unsqueeze(0)
         return src_orig + (src - src_orig) * bypass_scale
 
 
 if __name__ == "__main__":
     model = SqueezeAndExciteBypassModule(embed_dim=512, bottleneck_dim=16)
 
-    src = torch.randn(size=(12, 110, 512))
-    print(nn.Parameter(torch.full((512,), 0.5)).shape)
-    mask = torch.zeros((12, 110))
-    print(model(src, src, mask).shape)
+    src = torch.randn(size=(110, 10, 512))
+    # print(nn.Parameter(torch.full((512,), 0.5)).shape)
+    # mask = torch.zeros((12, 110))
+    print(model(src, src, None).shape)
