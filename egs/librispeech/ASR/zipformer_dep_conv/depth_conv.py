@@ -26,20 +26,24 @@ from torch import Tensor, nn
 
 
 class DepthConv(nn.Module):
-    def __init__(self, nin: int, kernel_size: int = 3):
+    def __init__(self, in_channels: int, kernel_size: int = 3):
         super(DepthConv, self).__init__()
 
-        self.nin = nin
+        self.in_channels = in_channels
         self.kernel_size = kernel_size
 
-        self.depthwise = nn.Conv1d(nin, nin, kernel_size=3, padding=1, groups=nin)
+        self.depthwise = nn.Conv1d(
+            in_channels, in_channels, kernel_size=3, padding=1, groups=in_channels
+        )
 
     def forward(self, x: Tensor):
         """
         x: Tensor, (seq_len, batch, channels)
         """
         seq_len, batch, channels = x.shape
-        assert channels == self.nin, f"x.shape: {x.shape}, nin: {self.nin}"
+        assert (
+            channels == self.in_channels
+        ), f"x.shape: {x.shape}, in_channels: {self.in_channels}"
 
         x = x.permute(0, 2, 1)
         out = self.depthwise(x)
@@ -50,7 +54,7 @@ class DepthConv(nn.Module):
 
 if __name__ == "__main__":
     dconv = DepthConv(
-        nin=512,
+        in_channels=512,
         kernel_size=3,
     )
     inp = torch.rand((172, 50, 512))  # .permute(2, 1, 0)
