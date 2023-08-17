@@ -897,22 +897,20 @@ def deprecated_greedy_search_batch_for_cross_attn(
     for t in range(T):
         current_encoder_out = encoder_out[:, t : t + 1, :].unsqueeze(2)  # noqa
         # current_encoder_out's shape: (batch_size, 1, 1, encoder_out_dim)
-        attn_encoder_out = model.joiner.label_level_am_attention(
-            encoder_out.unsqueeze(2),
-            decoder_out.unsqueeze(2),
-            encoder_out_lens,
-            for_reference=True,
-            offset=t,
-        )
+        # attn_encoder_out = model.joiner.label_level_am_attention(
+        #     encoder_out.unsqueeze(2),
+        #     decoder_out.unsqueeze(2),
+        #     encoder_out_lens,
+        #     for_reference=True,
+        #     offset=t,
+        # )
         # print(torch.max(attn_encoder_out))
         # print(encoder_out[:, t : t + 1, :].unsqueeze(2))
         # current_encoder_out = torch.zeros_like(current_encoder_out)
         logits = model.joiner(
             current_encoder_out,
             decoder_out.unsqueeze(1),
-            attn_encoder_out,
             encoder_out_lens,
-            apply_attn=True,
             project_input=False,
         )
         # logits'shape (batch_size, 1, 1, vocab_size)

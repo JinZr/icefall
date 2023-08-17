@@ -21,6 +21,7 @@ from typing import Optional, Tuple
 import k2
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from encoder_interface import EncoderInterface
 from scaling import ScaledLinear
 
@@ -84,6 +85,14 @@ class AsrModel(nn.Module):
 
         self.encoder_embed = encoder_embed
         self.encoder = encoder
+
+        self.ce_out = nn.Sequential(
+            nn.Linear(in_features=512, out_features=joiner.vocab_size),
+            nn.Softmax(dim=-1),
+        )
+
+        self.ce_loss = nn.CrossEntropyLoss(reduction="sum", ignore_index=1)
+
         self.dropout = nn.Dropout(p=0.5)
 
         self.use_transducer = use_transducer
@@ -236,10 +245,20 @@ class AsrModel(nn.Module):
         # if self.training and random.random() < 0.25:
         #    am = penalize_abs_values_gt(am, 30.0, 1.0e-04)
 
-        attn_encoder_out = self.joiner.label_level_am_attention(
-            encoder_out,
-            decoder_out,
-            encoder_out_lens,
+        attn_weights = self.joiner.attn_weights(
+            key=encoder_out.permute(1, 0, 2),
+            query=decoder_out.permute(1, 0, 2),
+            pos_emb=self.joiner.pos_encode(decoder_out.permute(1, 0, 2)),
+            key_padding_mask=make_pad_mask(lengths=encoder_out_lens),
+        )
+        cross_attn = self.joiner.cross_attn(
+            x=encoder_out.permute(1, 0, 2),
+            attn_weights=attn_weights,
+        )
+        cross_attn = self.ce_out(cross_attn)
+        attn_loss = self.ce_loss(
+            cross_attn.view(-1, self.joiner.vocab_size),
+            F.pad(y_padded, (0, 1), "constant", 0).flatten(),
         )
 
         with torch.cuda.amp.autocast(enabled=False):
@@ -279,9 +298,7 @@ class AsrModel(nn.Module):
         logits = self.joiner(
             am_pruned,
             lm_pruned,
-            None,
             encoder_out_lens,
-            apply_attn=True,  # batch_idx_train > self.params.warm_step,
             project_input=False,
         )
 
@@ -295,7 +312,7 @@ class AsrModel(nn.Module):
                 reduction="sum",
             )
 
-        return simple_loss, pruned_loss
+        return simple_loss, pruned_loss, attn_loss
 
     def forward(
         self,
@@ -350,7 +367,7 @@ class AsrModel(nn.Module):
 
         if self.use_transducer:
             # Compute transducer loss
-            simple_loss, pruned_loss = self.forward_transducer(
+            simple_loss, pruned_loss, attn_loss = self.forward_transducer(
                 encoder_out=encoder_out,
                 encoder_out_lens=encoder_out_lens,
                 y=y.to(x.device),
@@ -376,4 +393,4 @@ class AsrModel(nn.Module):
         else:
             ctc_loss = torch.empty(0)
 
-        return simple_loss, pruned_loss, ctc_loss
+        return simple_loss, pruned_loss, ctc_loss, attn_loss

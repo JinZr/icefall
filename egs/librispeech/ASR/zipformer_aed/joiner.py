@@ -18,8 +18,10 @@ import logging
 
 import torch
 import torch.nn as nn
-from alignment_attention_module import AlignmentAttentionModule
 from scaling import ScaledLinear
+
+from zipformer import CompactRelPositionalEncoding
+from cross_attention import RelPositionMultiheadCrossAttentionWeights, CrossAttention
 
 
 class Joiner(nn.Module):
@@ -32,11 +34,28 @@ class Joiner(nn.Module):
     ):
         super().__init__()
 
-        self.label_level_am_attention = AlignmentAttentionModule()
         self.encoder_proj = ScaledLinear(encoder_dim, joiner_dim, initial_scale=0.25)
         self.decoder_proj = ScaledLinear(decoder_dim, joiner_dim, initial_scale=0.25)
         self.output_linear = nn.Linear(joiner_dim, vocab_size)
-        self.enable_attn = False
+        self.vocab_size = vocab_size
+
+        self.attn_weights = RelPositionMultiheadCrossAttentionWeights(
+            embed_dim=512,
+            pos_dim=192,
+            num_heads=5,
+            query_head_dim=32,
+            pos_head_dim=4,
+            dropout=0.0,
+        )
+        self.cross_attn = CrossAttention(
+            embed_dim=512,
+            num_heads=5,
+            value_head_dim=12,
+        )
+        self.pos_encode = CompactRelPositionalEncoding(
+            embed_dim=192,
+            dropout_rate=0.15,
+        )
 
     def forward(
         self,

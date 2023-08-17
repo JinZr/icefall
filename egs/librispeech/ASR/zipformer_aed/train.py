@@ -65,7 +65,6 @@ import sentencepiece as spm
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
-from alignment_attention_module import AlignmentAttentionModule
 from asr_datamodule import LibriSpeechAsrDataModule
 from decoder import Decoder
 from joiner import Joiner
@@ -794,7 +793,7 @@ def compute_loss(
     y = k2.RaggedTensor(y)
 
     with torch.set_grad_enabled(is_training):
-        simple_loss, pruned_loss, ctc_loss = model(
+        simple_loss, pruned_loss, ctc_loss, attn_loss = model(
             x=feature,
             x_lens=feature_lens,
             y=y,
@@ -820,7 +819,11 @@ def compute_loss(
                 if batch_idx_train >= warm_step
                 else 0.1 + 0.9 * (batch_idx_train / warm_step)
             )
-            loss += simple_loss_scale * simple_loss + pruned_loss_scale * pruned_loss
+            loss += (
+                simple_loss_scale * simple_loss
+                + pruned_loss_scale * pruned_loss
+                + 0.1 * attn_loss
+            )
 
         if params.use_ctc:
             loss += params.ctc_loss_scale * ctc_loss
@@ -837,6 +840,7 @@ def compute_loss(
     if params.use_transducer:
         info["simple_loss"] = simple_loss.detach().cpu().item()
         info["pruned_loss"] = pruned_loss.detach().cpu().item()
+        info["attn_loss"] = attn_loss.detach().cpu().item()
     if params.use_ctc:
         info["ctc_loss"] = ctc_loss.detach().cpu().item()
 
@@ -1336,6 +1340,7 @@ def scan_pessimistic_batches_for_oom(
     sp: spm.SentencePieceProcessor,
     params: AttributeDict,
 ):
+    return
     from lhotse.dataset import find_pessimistic_batches
 
     logging.info(
