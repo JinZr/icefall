@@ -406,7 +406,7 @@ def get_parser():
     parser.add_argument(
         "--attn-loss-scale",
         type=float,
-        default=0.1,
+        required=True,
         help="Scale for Attention (CE) loss.",
     )
 
