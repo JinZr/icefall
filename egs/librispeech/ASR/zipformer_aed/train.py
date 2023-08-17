@@ -404,6 +404,13 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--attn-loss-scale",
+        type=float,
+        default=0.1,
+        help="Scale for Attention (CE) loss.",
+    )
+
+    parser.add_argument(
         "--seed",
         type=int,
         default=42,
@@ -822,7 +829,7 @@ def compute_loss(
             loss += (
                 simple_loss_scale * simple_loss
                 + pruned_loss_scale * pruned_loss
-                + 0.1 * attn_loss
+                + params.attn_loss_scale * attn_loss
             )
 
         if params.use_ctc:
