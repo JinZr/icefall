@@ -85,7 +85,7 @@ class AsrModel(nn.Module):
         self.encoder = encoder
 
         self.predictor = Predictor(
-            idim=256,
+            idim=512,
             l_order=1,
             r_order=1,
         )
