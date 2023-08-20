@@ -21,6 +21,7 @@ from typing import Optional, Tuple
 import k2
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from encoder_interface import EncoderInterface
 from predictor import MAELoss, Predictor, cif
 from scaling import ScaledLinear
@@ -267,12 +268,12 @@ class AsrModel(nn.Module):
         # forward cif
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = self.predictor(
             hidden=proj_am,
-            target_label=y_padded,
+            target_label=F.pad(y_padded, (0, 1), "constant", 0),
             mask=~make_pad_mask(encoder_out_lens).to(encoder_out.device).int(),
         )
         pre_token_length = pre_token_length.round().long()
         cif_loss = self.criterion_pre(
-            y_lens.type_as(pre_token_length), pre_token_length
+            (y_lens + 1).type_as(pre_token_length), pre_token_length
         )
 
         # am_pruned : [B, T, prune_range, encoder_dim]
@@ -290,7 +291,7 @@ class AsrModel(nn.Module):
         logits = self.joiner(pre_acoustic_embeds, proj_lm, project_input=False)
         ce_loss = self.ce_loss(
             logits.view(-1, self.joiner.vocab_size),
-            y_padded,
+            F.pad(y_padded, (0, 1), "constant", 0).flatten(),
         )
 
         # with torch.cuda.amp.autocast(enabled=False):

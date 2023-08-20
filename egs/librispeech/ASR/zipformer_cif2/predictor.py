@@ -63,11 +63,14 @@ class Predictor(nn.Module):
         output = torch.relu(output)
         output = self.cif_output(output)
         alphas = torch.sigmoid(output)
+        # print(alphas.shape)
         alphas = torch.nn.functional.relu(
             alphas * self.smooth_factor - self.noise_threshold
         )
         if mask is not None:
-            mask = mask.transpose(-1, -2).float()
+            # mask = mask.transpose(-1, -2).float()
+            mask = mask.unsqueeze(-1).float()
+            # print(mask.shape)
             alphas = alphas * mask
         if mask_chunk_predictor is not None:
             alphas = alphas * mask_chunk_predictor
@@ -81,6 +84,9 @@ class Predictor(nn.Module):
             target_length = None
         token_num = alphas.sum(-1)
         if target_length is not None:
+            # print(alphas.shape)
+            # print(target_length.shape)
+            # print(token_num.shape)
             alphas *= (target_length / token_num)[:, None].repeat(1, alphas.size(1))
         elif self.tail_threshold > 0.0:
             hidden, alphas, token_num = self.tail_process_fn(
