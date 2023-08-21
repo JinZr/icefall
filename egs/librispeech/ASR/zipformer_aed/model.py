@@ -26,6 +26,7 @@ from encoder_interface import EncoderInterface
 from scaling import ScaledLinear
 
 from icefall.utils import AttributeDict, add_sos, make_pad_mask
+from label_smoothing import LabelSmoothingLoss
 
 
 class AsrModel(nn.Module):
@@ -88,10 +89,9 @@ class AsrModel(nn.Module):
 
         self.ce_out = nn.Sequential(
             nn.Linear(in_features=512, out_features=joiner.vocab_size),
-            nn.Softmax(dim=-1),
+            nn.LogSoftmax(dim=-1),
         )
-
-        self.ce_loss = nn.CrossEntropyLoss(reduction="sum", ignore_index=1)
+        self.ce_loss = LabelSmoothingLoss()
 
         self.dropout = nn.Dropout(p=0.5)
 
@@ -246,19 +246,36 @@ class AsrModel(nn.Module):
         #    am = penalize_abs_values_gt(am, 30.0, 1.0e-04)
 
         attn_weights = self.joiner.attn_weights(
-            key=encoder_out.permute(1, 0, 2),
-            query=decoder_out.permute(1, 0, 2),
+            key=encoder_out.permute(1, 0, 2),  # (N, T, C) -> (T, N, C)
+            query=decoder_out.permute(1, 0, 2),  # (N, T, C) -> (T, N, C)
             pos_emb=self.joiner.pos_encode(decoder_out.permute(1, 0, 2)),
             key_padding_mask=make_pad_mask(lengths=encoder_out_lens),
-        )
+        )  # (T, N, C)
         cross_attn = self.joiner.cross_attn(
             x=encoder_out.permute(1, 0, 2),
             attn_weights=attn_weights,
-        )
+        ).permute(
+            1, 0, 2
+        )  # (N, T, C)
         cross_attn = self.ce_out(cross_attn)
+        # attn_loss = self.ce_loss(
+        #     cross_attn.view(-1, self.joiner.vocab_size),
+        #     F.one_hot(
+        #         F.pad(y_padded, (0, 1), "constant", 0),
+        #         num_classes=self.joiner.vocab_size,
+        #     )
+        #     .permute(1, 0, 2)
+        #     .contiguous()
+        #     .view(-1, self.joiner.vocab_size)
+        #     .float(),
+        # )
+        # attn_loss = self.ce_loss(
+        #     cross_attn.view(-1, self.joiner.vocab_size),
+        #     F.pad(y_padded, (0, 1), "constant", 0).flatten(),
+        # )
         attn_loss = self.ce_loss(
-            cross_attn.view(-1, self.joiner.vocab_size),
-            F.pad(y_padded, (0, 1), "constant", 0).flatten(),
+            cross_attn,
+            F.pad(y_padded, (0, 1), "constant", 0),
         )
 
         with torch.cuda.amp.autocast(enabled=False):
@@ -289,7 +306,6 @@ class AsrModel(nn.Module):
             lm=self.joiner.decoder_proj(decoder_out),
             ranges=ranges,
         )
-        am_pruned = self.dropout(am_pruned)
         # logits : [B, T, prune_range, vocab_size]
 
         # project_input=False since we applied the decoder's input projections
