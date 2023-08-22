@@ -24,7 +24,7 @@ from scaling import (
 )
 from torch import Tensor, nn
 
-from zipformer import CompactRelPositionalEncoding, SelfAttention
+from zipformer import CompactRelPositionalEncoding
 
 
 def _whitening_schedule(x: float, ratio: float = 2.0) -> ScheduledFloat:
@@ -35,7 +35,7 @@ def _balancer_schedule(min_prob: float):
     return ScheduledFloat((0.0, 0.4), (8000.0, min_prob))
 
 
-class RelPositionMultiheadCrossAttentionWeights(nn.Module):
+class PositionMultiheadCrossAttentionWeights(nn.Module):
     r"""Module that computes multi-head attention weights with relative position encoding.
     Various other modules consume the resulting attention weights: see, for example, the
     SimpleAttention module which allows you to compute conventional attention.
@@ -115,10 +115,12 @@ class RelPositionMultiheadCrossAttentionWeights(nn.Module):
             prob=0.025,
         )
 
-        # linear transformation for positional encoding.
+        # NOTE: [deprecated] linear transformation for positional encoding.
         self.linear_pos = ScaledLinear(
             pos_dim, num_heads * pos_head_dim, bias=False, initial_scale=0.05
         )
+        # NOTE: we use abs-pos-enc instead
+        self.decoder_pos = PositionalEncoding(d_model=embed_dim)
 
         # the following are for diagnosics only, see --print-diagnostics option
         self.copy_pos_query = Identity()
@@ -128,14 +130,12 @@ class RelPositionMultiheadCrossAttentionWeights(nn.Module):
         self,
         query: Tensor,
         key: Tensor,
-        pos_emb: Tensor,
         key_padding_mask: Optional[Tensor] = None,
         attn_mask: Optional[Tensor] = None,
     ) -> Tensor:
         r"""
         Args:
             x: input of shape (seq_len, batch_size, embed_dim)
-            pos_emb: Positional embedding tensor, of shape (1, 2*seq_len - 1, pos_dim)
             key_padding_mask: a bool tensor of shape (batch_size, seq_len).  Positions that
                are True in this mask will be ignored as sources in the attention weighting.
             attn_mask: mask of shape (seq_len, seq_len) or (batch_size, seq_len, seq_len),
@@ -146,6 +146,9 @@ class RelPositionMultiheadCrossAttentionWeights(nn.Module):
            interpreted as (hum_heads, batch_size, tgt_seq_len, src_seq_len).
         """
         key = self.key_proj(key)
+
+        # NOTE: apply pos emb to query
+        query = self.decoder_pos(query)
         query = self.query_proj(query)
 
         query_head_dim = self.query_head_dim
@@ -552,8 +555,83 @@ class CrossAttention(nn.Module):
         return x, cached_val
 
 
+class PositionalEncoding(nn.Module):
+    """This class implements the positional encoding
+    proposed in the following paper:
+
+    - Attention Is All You Need: https://arxiv.org/pdf/1706.03762.pdf
+
+        PE(pos, 2i) = sin(pos / (10000^(2i/d_modle))
+        PE(pos, 2i+1) = cos(pos / (10000^(2i/d_modle))
+
+    Note::
+
+      1 / (10000^(2i/d_model)) = exp(-log(10000^(2i/d_model)))
+                               = exp(-1* 2i / d_model * log(100000))
+                               = exp(2i * -(log(10000) / d_model))
+    """
+
+    def __init__(self, d_model: int, dropout: float = 0.1) -> None:
+        """
+        Args:
+          d_model:
+            Embedding dimension.
+          dropout:
+            Dropout probability to be applied to the output of this module.
+        """
+        super().__init__()
+        self.d_model = d_model
+        self.dropout = nn.Dropout(p=dropout)
+        # not doing: self.pe = None because of errors thrown by torchscript
+        self.pe = torch.zeros(1, 0, self.d_model, dtype=torch.float32)
+
+    def extend_pe(self, x: torch.Tensor) -> None:
+        """Extend the time t in the positional encoding if required.
+
+        The shape of `self.pe` is (1, T1, d_model). The shape of the input x
+        is (N, T, d_model). If T > T1, then we change the shape of self.pe
+        to (N, T, d_model). Otherwise, nothing is done.
+
+        Args:
+          x:
+            It is a tensor of shape (N, T, C).
+        Returns:
+          Return None.
+        """
+        if self.pe is not None:
+            if self.pe.size(1) >= x.size(1):
+                self.pe = self.pe.to(dtype=x.dtype, device=x.device)
+                return
+        pe = torch.zeros(x.size(1), self.d_model, dtype=torch.float32)
+        position = torch.arange(0, x.size(1), dtype=torch.float32).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, self.d_model, 2, dtype=torch.float32)
+            * -(math.log(10000.0) / self.d_model)
+        )
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)
+        # Now pe is of shape (1, T, d_model), where T is x.size(1)
+        self.pe = pe.to(device=x.device, dtype=x.dtype)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Add positional encoding.
+
+        Args:
+          x:
+            Its shape is (N, T, C)
+
+        Returns:
+          Return a tensor of shape (N, T, C)
+        """
+        self.extend_pe(x)
+        x = x + self.dropout(self.pe[:, : x.size(1), :])
+        return x
+
+
 if __name__ == "__main__":
-    attn = RelPositionMultiheadCrossAttentionWeights(
+    attn = PositionMultiheadCrossAttentionWeights(
         embed_dim=512,
         pos_dim=192,
         num_heads=5,
