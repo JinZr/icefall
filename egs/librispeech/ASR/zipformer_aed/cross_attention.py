@@ -135,7 +135,7 @@ class PositionMultiheadCrossAttentionWeights(nn.Module):
     ) -> Tensor:
         r"""
         Args:
-            x: input of shape (seq_len, batch_size, embed_dim)
+            query & key: input of shape (seq_len, batch_size, embed_dim)
             key_padding_mask: a bool tensor of shape (batch_size, seq_len).  Positions that
                are True in this mask will be ignored as sources in the attention weighting.
             attn_mask: mask of shape (seq_len, seq_len) or (batch_size, seq_len, seq_len),
@@ -147,7 +147,7 @@ class PositionMultiheadCrossAttentionWeights(nn.Module):
         """
         key = self.key_proj(key)
 
-        # NOTE: apply pos emb to query
+        # NOTE: apply abs pos emb to query
         query = self.decoder_pos(query)
         query = self.query_proj(query)
 
@@ -620,14 +620,15 @@ class PositionalEncoding(nn.Module):
 
         Args:
           x:
-            Its shape is (N, T, C)
+            Its shape is (T, N, C)
 
         Returns:
-          Return a tensor of shape (N, T, C)
+          Return a tensor of shape (T, N, C)
         """
+        x = x.permute(1, 0, 2)  # (T, N, C) -> (N, T, C)
         self.extend_pe(x)
         x = x + self.dropout(self.pe[:, : x.size(1), :])
-        return x
+        return x.permute(1, 0, 2)  # (N, T, C) -> (T, N, C)
 
 
 if __name__ == "__main__":
