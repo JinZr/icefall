@@ -21,7 +21,7 @@ import torch.nn as nn
 from scaling import ScaledLinear
 
 from zipformer import CompactRelPositionalEncoding
-from cross_attention import RelPositionMultiheadCrossAttentionWeights, CrossAttention
+from cross_attention import PositionMultiheadCrossAttentionWeights, CrossAttention
 
 
 class Joiner(nn.Module):
@@ -39,7 +39,7 @@ class Joiner(nn.Module):
         self.output_linear = nn.Linear(joiner_dim, vocab_size)
         self.vocab_size = vocab_size
 
-        self.attn_weights = RelPositionMultiheadCrossAttentionWeights(
+        self.attn_weights = PositionMultiheadCrossAttentionWeights(
             embed_dim=512,
             pos_dim=192,
             num_heads=5,
@@ -52,6 +52,8 @@ class Joiner(nn.Module):
             num_heads=5,
             value_head_dim=12,
         )
+
+        # NOTE: deprecated
         self.pos_encode = CompactRelPositionalEncoding(
             embed_dim=192,
             dropout_rate=0.15,
