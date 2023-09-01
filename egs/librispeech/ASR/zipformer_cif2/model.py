@@ -270,6 +270,7 @@ class AsrModel(nn.Module):
             hidden=proj_am,
             target_label=F.pad(y_padded, (0, 1), "constant", 0),
             mask=~make_pad_mask(encoder_out_lens).to(encoder_out.device).int(),
+            target_label_length=y_lens + 1,
         )
         pre_token_length = pre_token_length.round().long()
         cif_loss = self.criterion_pre(
