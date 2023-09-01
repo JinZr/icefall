@@ -210,7 +210,7 @@ class MAELoss(nn.Module):
     def __init__(self, normalize_length=False):
         super(MAELoss, self).__init__()
         self.normalize_length = normalize_length
-        self.criterion = torch.nn.L1Loss(reduction="sum")
+        self.criterion = torch.nn.MSELoss(reduction="sum")
 
     def forward(self, token_length, pre_token_length):
         loss_token_normalizer = token_length.size(0)

@@ -90,7 +90,7 @@ class AsrModel(nn.Module):
             l_order=1,
             r_order=1,
         )
-        self.criterion_pre = MAELoss(normalize_length=False)
+        self.criterion_pre = MAELoss(normalize_length=True)
 
         self.use_transducer = use_transducer
         if use_transducer:
@@ -270,11 +270,11 @@ class AsrModel(nn.Module):
             hidden=proj_am,
             target_label=F.pad(y_padded, (0, 1), "constant", 0),
             mask=~make_pad_mask(encoder_out_lens).to(encoder_out.device).int(),
-            target_label_length=y_lens + 1,
+            target_label_length=(y_lens + 1).cuda(),
         )
         pre_token_length = pre_token_length.round().long()
         cif_loss = self.criterion_pre(
-            (y_lens + 1).type_as(pre_token_length), pre_token_length
+            (y_lens + 1).cuda(), pre_token_length.float()
         )
 
         # am_pruned : [B, T, prune_range, encoder_dim]
