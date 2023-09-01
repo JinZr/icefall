@@ -90,7 +90,7 @@ class AsrModel(nn.Module):
             l_order=1,
             r_order=1,
         )
-        self.criterion_pre = MAELoss(normalize_length=True)
+        self.criterion_pre = MAELoss(normalize_length=False)
 
         self.use_transducer = use_transducer
         if use_transducer:

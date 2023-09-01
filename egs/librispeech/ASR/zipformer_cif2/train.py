@@ -812,7 +812,7 @@ def compute_loss(
                 if batch_idx_train >= warm_step
                 else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
             )
-            loss += simple_loss_scale * simple_loss + ce_loss + cif_loss
+            loss += simple_loss_scale * simple_loss + ce_loss + cif_loss 
 
         if params.use_ctc:
             loss += params.ctc_loss_scale * ctc_loss
