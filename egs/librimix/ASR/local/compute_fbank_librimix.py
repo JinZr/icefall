@@ -73,13 +73,13 @@ def compute_fbank_librimix(n_src: int, part: str, supervision_part: str):
                 )
             )
         cut_set = CutSet.from_cuts(cuts)
-        cut_set.compute_and_store_features(
+        cut_set = cut_set.compute_and_store_features(
             extractor=extractor,
             storage_path=f"{output_dir}/librimix_{n_src}mix_feats_{part}",
             # when an executor is specified, make more partitions
             num_jobs=num_jobs if ex is None else 80,
             executor=ex,
-            storage_type=LilcomChunkyWriter,
+            storage_type=LilcomChunkyWriter
         )
         cuts_filename = f"librimix_{n_src}mix_cuts_{part}.jsonl.gz"
         cut_set.to_file(output_dir / cuts_filename)
