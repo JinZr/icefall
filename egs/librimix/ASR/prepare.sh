@@ -122,6 +122,9 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
         cd data/manifests
         ln -svf $(realpath ../../../../librispeech/ASR/data/manifests/librispeech_supervisions_train-clean-100.jsonl.gz) .
         ln -svf $(realpath ../../../../librispeech/ASR/data/manifests/librispeech_supervisions_train-clean-360.jsonl.gz) .
+        ln -svf $(realpath ../../../../librispeech/ASR/data/manifests/librispeech_supervisions_dev-clean.jsonl.gz) .
+        ln -svf $(realpath ../../../../librispeech/ASR/data/manifests/librispeech_supervisions_test-clean.jsonl.gz) .
+
         cd ../..
     else
         log "Abort! Please run ../../librispeech/ASR/prepare.sh --stage 1 --stop-stage 1 first"
