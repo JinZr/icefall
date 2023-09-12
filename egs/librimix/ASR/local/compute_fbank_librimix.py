@@ -40,8 +40,8 @@ def compute_fbank_lsmix():
         )
     )
 
-    clean100 = src_dir + "librispeech_supervisions_train-clean-100.jsonl.gz"
-    clean360 = src_dir + "librispeech_supervisions_train-clean-360.jsonl.gz"
+    clean100 = src_dir.joinpath("librispeech_supervisions_train-clean-100.jsonl.gz")
+    clean360 = src_dir.joinpath("librispeech_supervisions_train-clean-360.jsonl.gz")
 
     logging.info("Reading manifests")
     if not os.path.exists(clean100):
