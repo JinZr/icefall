@@ -27,7 +27,7 @@ torch.set_num_interop_threads(1)
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 
-def compute_fbank_librimix(n_src: int, part: str):
+def compute_fbank_librimix(n_src: int, part: str, supervision_part: str):
     src_dir = Path("data/manifests")
     output_dir = Path("data/fbank")
 
@@ -39,7 +39,7 @@ def compute_fbank_librimix(n_src: int, part: str):
     extractor = Fbank(FbankConfig(num_mel_bins=num_mel_bins))
 
     with get_executor() as ex:  # Initialize the executor only once.
-        supervision_set = src_dir.joinpath(f"librispeech_supervisions_{part}.jsonl.gz")
+        supervision_set = src_dir.joinpath(f"librispeech_supervisions_{supervision_part}.jsonl.gz")
 
         logging.info("Reading manifests")
         if not os.path.exists(supervision_set):
@@ -52,16 +52,16 @@ def compute_fbank_librimix(n_src: int, part: str):
         )
         cuts = []
         for recording in tqdm(recording_set):
-            recording_ids = recording.recording_id.split("_")
+            recording_ids = recording.id.split("_")
             cuts.append(
                 MonoCut(
-                    id=recording.recording_id,
+                    id=recording.id,
                     start=0,
                     duration=recording.duration,
                     recording=recording,
                     channel=0,
                     supervisions=merge_supervision_segments(
-                        recording_id=recording.recording_id,
+                        recording_id=recording.id,
                         duration=recording.duration,
                         supervisions=[
                             supervision_set.find(
@@ -72,8 +72,8 @@ def compute_fbank_librimix(n_src: int, part: str):
                     ),
                 )
             )
-        cuts = CutSet.from_cuts(cuts)
-        cuts.compute_and_store_features(
+        cut_set = CutSet.from_cuts(cuts)
+        cut_set.compute_and_store_features(
             extractor=extractor,
             storage_path=f"{output_dir}/librimix_{n_src}mix_feats_{part}",
             # when an executor is specified, make more partitions
@@ -81,21 +81,24 @@ def compute_fbank_librimix(n_src: int, part: str):
             executor=ex,
             storage_type=LilcomChunkyWriter,
         )
+        cuts_filename = f"librimix_{n_src}mix_cuts_{part}.jsonl.gz"
+        cut_set.to_file(output_dir / cuts_filename)
 
 
 def merge_supervision_segments(recording_id, duration, supervisions):
+    supervisions = [ list(s) for s in list(supervisions) ]
     return [
         SupervisionSegment(
             id=recording_id,
             recording_id=recording_id,
             start=0.0,
             duration=duration,
-            speaker="_".join([s.speaker for s in supervisions]),
-            text="<sc>".join([s.text for s in supervisions]),
+            speaker="_".join([list(s)[0].speaker for s in supervisions]),
+            text=" <sc> ".join([list(s)[0].text for s in supervisions]),
         )
     ]
 
 
 if __name__ == "__main__":
-    for part in ["train-100", "train-360"]:
-        compute_fbank_librimix(n_src=2, part=part)
+    for part, sup_part in zip( ["train-100", "train-360"], ["train-clean-100", "train-clean-360"]):
+        compute_fbank_librimix(n_src=2, part=part, supervision_part=sup_part)
