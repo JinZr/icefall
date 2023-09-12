@@ -187,15 +187,9 @@ if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
         cp data/lang_phone/words.txt $lang_dir
 
         if [ ! -f $lang_dir/transcript_words.txt ]; then
-            log "Generate data for BPE training"
-            files=$(
-                find "$dl_dir/LibriSpeech/train-clean-100" -name "*.trans.txt"
-                find "$dl_dir/LibriSpeech/train-clean-360" -name "*.trans.txt"
-                find "$dl_dir/LibriSpeech/train-other-500" -name "*.trans.txt"
-            )
-            for f in ${files[@]}; do
-                cat $f | cut -d " " -f 2-
-            done > $lang_dir/transcript_words.txt
+            gunzip -c data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz \
+                | jq '.supervisions[0].text' \
+                | sed 's/"//g' > $lang_dir/transcript_words.txt
         fi
 
         if [ ! -f $lang_dir/bpe.model ]; then
