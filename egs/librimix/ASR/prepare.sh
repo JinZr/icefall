@@ -144,3 +144,77 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
     touch data/manifests/.librimix.done
 fi
 
+if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
+    log "Stage 6: Compute fbank features for LibriMix"
+    mkdir -p data/fbank
+    ./local/compute_fbank_librimix.py
+fi
+
+if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
+    log "Stage 7: Prepare phone based lang"
+
+    if [ -d "../../librispeech/ASR/data/lang_phone" ]; then
+        cd data/
+        ln -svf $(realpath ../../../librispeech/ASR/data/lang_phone) .
+        cd ..
+    else
+        log "Abort! Please run ../../librispeech/ASR/prepare.sh --stage 5 --stop-stage 5 first"
+        exit 1
+    fi
+fi
+
+if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
+    log "Stage 7: Prepare BPE based lang"
+
+    for vocab_size in ${vocab_sizes[@]}; do
+        lang_dir=data/lang_bpe_${vocab_size}
+        mkdir -p $lang_dir
+        # We reuse words.txt from phone based lexicon
+        # so that the two can share G.pt later.
+        cp data/lang_phone/words.txt $lang_dir
+
+        if [ ! -f $lang_dir/transcript_words.txt ]; then
+        log "Generate data for BPE training"
+        files=$(
+            find "$dl_dir/LibriSpeech/train-clean-100" -name "*.trans.txt"
+            find "$dl_dir/LibriSpeech/train-clean-360" -name "*.trans.txt"
+            find "$dl_dir/LibriSpeech/train-other-500" -name "*.trans.txt"
+        )
+        for f in ${files[@]}; do
+            cat $f | cut -d " " -f 2-
+        done > $lang_dir/transcript_words.txt
+        fi
+
+        if [ ! -f $lang_dir/bpe.model ]; then
+            ./local/train_bpe_model.py \
+                --lang-dir $lang_dir \
+                --vocab-size $vocab_size \
+                --transcript $lang_dir/transcript_words.txt
+        fi
+
+        if [ ! -f $lang_dir/L_disambig.pt ]; then
+            ./local/prepare_lang_bpe.py --lang-dir $lang_dir
+
+            log "Validating $lang_dir/lexicon.txt"
+            ./local/validate_bpe_lexicon.py \
+                --lexicon $lang_dir/lexicon.txt \
+                --bpe-model $lang_dir/bpe.model
+        fi
+
+        if [ ! -f $lang_dir/L.fst ]; then
+            log "Converting L.pt to L.fst"
+            ./shared/convert-k2-to-openfst.py \
+                --olabels aux_labels \
+                $lang_dir/L.pt \
+                $lang_dir/L.fst
+        fi
+
+        if [ ! -f $lang_dir/L_disambig.fst ]; then
+            log "Converting L_disambig.pt to L_disambig.fst"
+            ./shared/convert-k2-to-openfst.py \
+                --olabels aux_labels \
+                $lang_dir/L_disambig.pt \
+                $lang_dir/L_disambig.fst
+        fi
+    done
+fi
