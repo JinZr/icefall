@@ -390,10 +390,7 @@ class LibriMixAsrDataModule:
 
     @lru_cache()
     def train_all_shuf_cuts(self) -> CutSet:
-        logging.info(
-            "About to get the shuffled train-2mix-100, \
-            train-2mix-360 cuts"
-        )
+        logging.info("About to get the shuffled train-2mix-100, train-2mix-360 cuts")
         return load_manifest_lazy(
             self.args.manifest_dir / "librimix_2mix_cuts_train-all-shuf.jsonl.gz"
         )
