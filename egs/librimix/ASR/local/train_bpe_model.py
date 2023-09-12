@@ -74,6 +74,7 @@ def main():
     # Note: unk_id is fixed to 2.
     # If you change it, you should also change other
     # places that are using it.
+    user_defined_symbols.append("▁<sc>")
 
     model_file = Path(model_prefix + ".model")
     if not model_file.is_file():
