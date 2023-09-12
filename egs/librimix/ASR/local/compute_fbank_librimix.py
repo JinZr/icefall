@@ -39,7 +39,9 @@ def compute_fbank_librimix(n_src: int, part: str, supervision_part: str):
     extractor = Fbank(FbankConfig(num_mel_bins=num_mel_bins))
 
     with get_executor() as ex:  # Initialize the executor only once.
-        supervision_set = src_dir.joinpath(f"librispeech_supervisions_{supervision_part}.jsonl.gz")
+        supervision_set = src_dir.joinpath(
+            f"librispeech_supervisions_{supervision_part}.jsonl.gz"
+        )
 
         logging.info("Reading manifests")
         if not os.path.exists(supervision_set):
@@ -79,14 +81,14 @@ def compute_fbank_librimix(n_src: int, part: str, supervision_part: str):
             # when an executor is specified, make more partitions
             num_jobs=num_jobs if ex is None else 80,
             executor=ex,
-            storage_type=LilcomChunkyWriter
+            storage_type=LilcomChunkyWriter,
         )
         cuts_filename = f"librimix_{n_src}mix_cuts_{part}.jsonl.gz"
         cut_set.to_file(output_dir / cuts_filename)
 
 
 def merge_supervision_segments(recording_id, duration, supervisions):
-    supervisions = [ list(s) for s in list(supervisions) ]
+    supervisions = [list(s) for s in list(supervisions)]
     return [
         SupervisionSegment(
             id=recording_id,
@@ -100,5 +102,8 @@ def merge_supervision_segments(recording_id, duration, supervisions):
 
 
 if __name__ == "__main__":
-    for part, sup_part in zip( ["train-100", "train-360"], ["train-clean-100", "train-clean-360"]):
+    for part, sup_part in zip(
+        ["train-100", "train-360", "dev", "test"],
+        ["train-clean-100", "train-clean-360", "dev", "test"],
+    ):
         compute_fbank_librimix(n_src=2, part=part, supervision_part=sup_part)

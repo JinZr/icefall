@@ -129,7 +129,7 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
     fi
 
     for n_src in 2; do
-        for part in train-100 train-360; do
+        for part in train-100 train-360 dev test; do
             log "Preparing Libri${n_src}Mix/wav16k/max/metadata/mixture_${part}_mix_both.csv."
             lhotse prepare librimix --with-precomputed-mixtures \
                 $dl_dir/Libri${n_src}Mix/wav16k/max/metadata/mixture_${part}_mix_both.csv \
@@ -147,7 +147,11 @@ fi
 if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
     log "Stage 6: Compute fbank features for LibriMix"
     mkdir -p data/fbank
-    ./local/compute_fbank_librimix.py
+
+    if [ ! -f "./data/fbank/.librimix.done" ]; then
+        ./local/compute_fbank_librimix.py
+        touch ./data/fbank/.librimix.done
+    fi
 fi
 
 if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
@@ -163,8 +167,8 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
     fi
 fi
 
-if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
-    log "Stage 7: Prepare BPE based lang"
+if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
+    log "Stage 8: Prepare BPE based lang"
 
     for vocab_size in ${vocab_sizes[@]}; do
         lang_dir=data/lang_bpe_${vocab_size}
@@ -174,15 +178,15 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
         cp data/lang_phone/words.txt $lang_dir
 
         if [ ! -f $lang_dir/transcript_words.txt ]; then
-        log "Generate data for BPE training"
-        files=$(
-            find "$dl_dir/LibriSpeech/train-clean-100" -name "*.trans.txt"
-            find "$dl_dir/LibriSpeech/train-clean-360" -name "*.trans.txt"
-            find "$dl_dir/LibriSpeech/train-other-500" -name "*.trans.txt"
-        )
-        for f in ${files[@]}; do
-            cat $f | cut -d " " -f 2-
-        done > $lang_dir/transcript_words.txt
+            log "Generate data for BPE training"
+            files=$(
+                find "$dl_dir/LibriSpeech/train-clean-100" -name "*.trans.txt"
+                find "$dl_dir/LibriSpeech/train-clean-360" -name "*.trans.txt"
+                find "$dl_dir/LibriSpeech/train-other-500" -name "*.trans.txt"
+            )
+            for f in ${files[@]}; do
+                cat $f | cut -d " " -f 2-
+            done > $lang_dir/transcript_words.txt
         fi
 
         if [ ! -f $lang_dir/bpe.model ]; then
