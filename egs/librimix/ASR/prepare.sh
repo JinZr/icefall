@@ -129,7 +129,7 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
     fi
 
     for n_src in 2; do
-        for part in train-clean-100 train-clean-300; do
+        for part in train-100 train-360; do
             log "Preparing Libri${n_src}Mix/wav16k/max/metadata/mixture_${part}_mix_both.csv."
             lhotse prepare librimix --with-precomputed-mixtures \
                 $dl_dir/Libri${n_src}Mix/wav16k/max/metadata/mixture_${part}_mix_both.csv \

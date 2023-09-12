@@ -98,5 +98,5 @@ def merge_supervision_segments(recording_id, duration, supervisions):
 
 
 if __name__ == "__main__":
-    for part in ["train-clean-100", "train-clean-360"]:
+    for part in ["train-100", "train-360"]:
         compute_fbank_librimix(n_src=2, part=part)
