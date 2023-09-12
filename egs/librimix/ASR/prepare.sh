@@ -117,6 +117,17 @@ fi
 
 if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
     log "Stage 5: Prepare LibriMix manifest"
+
+    if [ -e ../../librispeech/ASR/data/manifests/.librispeech.done ]; then
+        cd data/manifests
+        ln -svf $(realpath ../../../../librispeech/ASR/data/manifests/librispeech_supervisions_train-clean-100.jsonl.gz) .
+        ln -svf $(realpath ../../../../librispeech/ASR/data/manifests/librispeech_supervisions_train-clean-360.jsonl.gz) .
+        cd ../..
+    else
+        log "Abort! Please run ../../librispeech/ASR/prepare.sh --stage 1 --stop-stage 1 first"
+        exit 1
+    fi
+
     for n_src in 2 3; do
         for part in train-100 train-300; do
             lhotse prepare librimix --with-precomputed-mixtures \
@@ -124,5 +135,7 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
                 data/manifests
         done
     done
+
+    touch data/manifests/.librimix.done
 fi
 

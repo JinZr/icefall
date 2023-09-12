@@ -49,3 +49,8 @@ def compute_fbank_lsmix():
     if not os.path.exists(clean360):
         raise FileNotFoundError(f"Manifest {clean360} not found")
     supervisions = load_manifest(clean100) + load_manifest(clean360)
+    print(supervisions)
+
+
+if __name__ == "__main__":
+    compute_fbank_lsmix()
