@@ -153,8 +153,14 @@ if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
 
     if [ ! -f "./data/fbank/.librimix.done" ]; then
         ./local/compute_fbank_librimix.py
-        touch ./data/fbank/.librimix.done
+
+        if [ ! -f data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz ]; then
+            cat <(gunzip -c data/fbank/librimix_2mix_cuts_train-100.jsonl.gz) \
+            <(gunzip -c data/fbank/librimix_2mix_cuts_train-360.jsonl.gz) | \
+            shuf | gzip -c > data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz
+        fi
     fi
+
 fi
 
 if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
