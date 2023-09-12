@@ -58,7 +58,6 @@ def compute_fbank_librimix(n_src: int, part: str):
                     id=recording.recording_id,
                     start=0,
                     duration=recording.duration,
-                    channel=recording.channel,
                     recording=recording,
                     channel=0,
                     supervisions=merge_supervision_segments(
