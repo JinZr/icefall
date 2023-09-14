@@ -119,9 +119,9 @@ fi
 if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
   log "Stage 4: Extract features for LibriSpeech, trim to alignments, and shuffle the cuts"
   python local/compute_fbank_librispeech.py
-  lhotse combine data/manifests/librispeech_cuts_train* - |\
+  lhotse combine data/fbank/librispeech_cuts_train* - |\
     lhotse cut trim-to-alignments --type word --max-pause 0.2 - - |\
-    shuf | gzip -c > data/manifests/librispeech_cuts_train_trimmed.jsonl.gz
+    shuf | gzip -c > data/fbank/librispeech_cuts_train_trimmed.jsonl.gz
 fi
 
 if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
