@@ -33,12 +33,14 @@ class AsrModel(nn.Module):
         encoder_embed: nn.Module,
         encoder: EncoderInterface,
         decoder: Optional[nn.Module] = None,
+        mid_joiner: Optional[nn.Module] = None,
         joiner: Optional[nn.Module] = None,
         encoder_dim: int = 384,
         decoder_dim: int = 512,
         vocab_size: int = 500,
         use_transducer: bool = True,
         use_ctc: bool = False,
+        use_mid_rnnt_loss: bool = False,
     ):
         """A joint CTC & Transducer ASR model.
 
@@ -83,6 +85,7 @@ class AsrModel(nn.Module):
         self.encoder = encoder
 
         self.use_transducer = use_transducer
+        self.use_mid_rnnt_loss = use_mid_rnnt_loss
         if use_transducer:
             # Modules for Transducer head
             assert decoder is not None
@@ -90,12 +93,17 @@ class AsrModel(nn.Module):
             assert joiner is not None
 
             self.decoder = decoder
+            self.mid_joiner = mid_joiner
             self.joiner = joiner
 
             self.simple_am_proj = ScaledLinear(
                 encoder_dim, vocab_size, initial_scale=0.25
             )
             self.simple_lm_proj = ScaledLinear(
+                decoder_dim, vocab_size, initial_scale=0.25
+            )
+            self.mid_simple_am_proj = ScaledLinear(384, vocab_size, initial_scale=0.25)
+            self.mid_simple_lm_proj = ScaledLinear(
                 decoder_dim, vocab_size, initial_scale=0.25
             )
         else:
@@ -107,7 +115,7 @@ class AsrModel(nn.Module):
             # Modules for CTC head
             self.ctc_output = nn.Sequential(
                 nn.Dropout(p=0.1),
-                nn.Linear(384, vocab_size),
+                nn.Linear(encoder_dim, vocab_size),
                 nn.LogSoftmax(dim=-1),
             )
 
@@ -140,9 +148,8 @@ class AsrModel(nn.Module):
         )
 
         encoder_out = encoder_out.permute(1, 0, 2)  # (T, N, C) ->(N, T, C)
-        assert torch.all(encoder_out_lens > 0), (x_lens, encoder_out_lens)
-
         mid_encoder_out = mid_encoder_out.permute(1, 0, 2)  # (T, N, C) ->(N, T, C)
+        assert torch.all(encoder_out_lens > 0), (x_lens, encoder_out_lens)
 
         return mid_encoder_out, encoder_out, encoder_out_lens
 
@@ -280,6 +287,107 @@ class AsrModel(nn.Module):
                 reduction="sum",
             )
 
+        return simple_loss, pruned_loss, decoder_out
+
+    def forward_mid_transducer(
+        self,
+        mid_encoder_out: torch.Tensor,
+        encoder_out_lens: torch.Tensor,
+        decoder_out: torch.Tensor,
+        y: k2.RaggedTensor,
+        y_lens: torch.Tensor,
+        prune_range: int = 5,
+        am_scale: float = 0.0,
+        lm_scale: float = 0.0,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Compute Transducer loss.
+        Args:
+          encoder_out:
+            Encoder output, of shape (N, T, C).
+          encoder_out_lens:
+            Encoder output lengths, of shape (N,).
+          y:
+            A ragged tensor with 2 axes [utt][label]. It contains labels of each
+            utterance.
+          prune_range:
+            The prune range for rnnt loss, it means how many symbols(context)
+            we are considering for each frame to compute the loss.
+          am_scale:
+            The scale to smooth the loss with am (output of encoder network)
+            part
+          lm_scale:
+            The scale to smooth the loss with lm (output of predictor network)
+            part
+        """
+        blank_id = self.decoder.blank_id
+        decoder_out = decoder_out.detach()
+
+        # Note: y does not start with SOS
+        # y_padded : [B, S]
+        y_padded = y.pad(mode="constant", padding_value=0)
+
+        y_padded = y_padded.to(torch.int64)
+        boundary = torch.zeros(
+            (mid_encoder_out.size(0), 4),
+            dtype=torch.int64,
+            device=mid_encoder_out.device,
+        )
+        boundary[:, 2] = y_lens
+        boundary[:, 3] = encoder_out_lens
+
+        lm = self.mid_simple_lm_proj(decoder_out)
+        am = self.mid_simple_am_proj(mid_encoder_out)
+
+        # if self.training and random.random() < 0.25:
+        #    lm = penalize_abs_values_gt(lm, 100.0, 1.0e-04)
+        # if self.training and random.random() < 0.25:
+        #    am = penalize_abs_values_gt(am, 30.0, 1.0e-04)
+
+        with torch.cuda.amp.autocast(enabled=False):
+            simple_loss, (px_grad, py_grad) = k2.rnnt_loss_smoothed(
+                lm=lm.float(),
+                am=am.float(),
+                symbols=y_padded,
+                termination_symbol=blank_id,
+                lm_only_scale=lm_scale,
+                am_only_scale=am_scale,
+                boundary=boundary,
+                reduction="sum",
+                return_grad=True,
+            )
+
+        # ranges : [B, T, prune_range]
+        ranges = k2.get_rnnt_prune_ranges(
+            px_grad=px_grad,
+            py_grad=py_grad,
+            boundary=boundary,
+            s_range=prune_range,
+        )
+
+        # am_pruned : [B, T, prune_range, encoder_dim]
+        # lm_pruned : [B, T, prune_range, decoder_dim]
+        am_pruned, lm_pruned = k2.do_rnnt_pruning(
+            am=self.mid_joiner.encoder_proj(mid_encoder_out),
+            lm=self.mid_joiner.decoder_proj(decoder_out),
+            ranges=ranges,
+        )
+
+        # logits : [B, T, prune_range, vocab_size]
+
+        # project_input=False since we applied the decoder's input projections
+        # prior to do_rnnt_pruning (this is an optimization for speed).
+        logits = self.mid_joiner(am_pruned, lm_pruned, project_input=False)
+
+        with torch.cuda.amp.autocast(enabled=False):
+            pruned_loss = k2.rnnt_loss_pruned(
+                logits=logits.float(),
+                symbols=y_padded,
+                ranges=ranges,
+                termination_symbol=blank_id,
+                boundary=boundary,
+                reduction="sum",
+            )
+
         return simple_loss, pruned_loss
 
     def forward(
@@ -334,7 +442,7 @@ class AsrModel(nn.Module):
 
         if self.use_transducer:
             # Compute transducer loss
-            simple_loss, pruned_loss = self.forward_transducer(
+            simple_loss, pruned_loss, decoder_out = self.forward_transducer(
                 encoder_out=encoder_out,
                 encoder_out_lens=encoder_out_lens,
                 y=y.to(x.device),
@@ -347,11 +455,25 @@ class AsrModel(nn.Module):
             simple_loss = torch.empty(0)
             pruned_loss = torch.empty(0)
 
+        if self.use_mid_rnnt_loss:
+            mid_simple_loss, mid_pruned_loss = self.forward_mid_transducer(
+                mid_encoder_out=mid_encoder_out,
+                encoder_out_lens=encoder_out_lens,
+                decoder_out=decoder_out,
+                y=y.to(x.device),
+                y_lens=y_lens,
+                prune_range=prune_range,
+                am_scale=am_scale,
+                lm_scale=lm_scale,
+            )
+        else:
+            mid_simple_loss, mid_pruned_loss = torch.empty(0), torch.empty(0)
+
         if self.use_ctc:
             # Compute CTC loss
             targets = y.values
             ctc_loss = self.forward_ctc(
-                encoder_out=mid_encoder_out,
+                encoder_out=encoder_out,
                 encoder_out_lens=encoder_out_lens,
                 targets=targets,
                 target_lengths=y_lens,
@@ -359,4 +481,4 @@ class AsrModel(nn.Module):
         else:
             ctc_loss = torch.empty(0)
 
-        return simple_loss, pruned_loss, ctc_loss
+        return mid_simple_loss, mid_pruned_loss, simple_loss, pruned_loss, ctc_loss

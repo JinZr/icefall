@@ -115,6 +115,8 @@ from beam_search import (
     fast_beam_search_one_best,
     greedy_search,
     greedy_search_batch,
+    mid_greedy_search_batch,
+    tie_greedy_search_batch,
     modified_beam_search,
     modified_beam_search_lm_rescore,
     modified_beam_search_lm_rescore_LODR,
@@ -370,6 +372,28 @@ def get_parser():
         modified_beam_search_LODR.
         """,
     )
+    # ZR edited
+    parser.add_argument(
+        "--use-mid-rnnt-loss",
+        type=str2bool,
+        default=True,
+    )
+    parser.add_argument(
+        "--mid-rnnt-loss-scale",
+        type=float,
+        default=0.3,
+    )
+    parser.add_argument(
+        "--use-mid-enc-output",
+        type=str2bool,
+        default=False,
+    )
+    parser.add_argument(
+        "--tie",
+        type=str2bool,
+        default=False,
+    )
+
     add_model_arguments(parser)
 
     return parser
@@ -506,11 +530,26 @@ def decode_one_batch(
         for hyp in sp.decode(hyp_tokens):
             hyps.append(hyp.split())
     elif params.decoding_method == "greedy_search" and params.max_sym_per_frame == 1:
-        hyp_tokens = greedy_search_batch(
-            model=model,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-        )
+        if not params.use_mid_enc_output:
+            hyp_tokens = greedy_search_batch(
+                model=model,
+                encoder_out=encoder_out,
+                encoder_out_lens=encoder_out_lens,
+            )
+        else:
+            if not params.tie:
+                hyp_tokens = mid_greedy_search_batch(
+                    model=model,
+                    mid_encoder_out=mid_encoder_out,
+                    encoder_out_lens=encoder_out_lens,
+                )
+            else:
+                hyp_tokens = tie_greedy_search_batch(
+                    model=model,
+                    encoder_out=encoder_out,
+                    mid_encoder_out=mid_encoder_out,
+                    encoder_out_lens=encoder_out_lens,
+                )
         for hyp in sp.decode(hyp_tokens):
             hyps.append(hyp.split())
     elif params.decoding_method == "modified_beam_search":
@@ -594,7 +633,13 @@ def decode_one_batch(
             hyps.append(sp.decode(hyp).split())
 
     if params.decoding_method == "greedy_search":
-        return {"greedy_search": hyps}
+        if not params.use_mid_enc_output:
+            return {"greedy_search": hyps}
+        else:
+            if not params.tie:
+                return {"greedy_search_mid_enc": hyps}
+            else:
+                return {"greedy_search_mid_enc_tie": hyps}
     elif "fast_beam_search" in params.decoding_method:
         key = f"beam_{params.beam}_"
         key += f"max_contexts_{params.max_contexts}_"
