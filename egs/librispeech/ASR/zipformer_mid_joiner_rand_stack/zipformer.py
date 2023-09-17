@@ -17,28 +17,33 @@
 # limitations under the License.
 
 import copy
+import logging
 import math
+import random
 import warnings
 from typing import List, Optional, Tuple, Union
-import logging
+
 import torch
-import random
 from encoder_interface import EncoderInterface
 from scaling import (
+    Identity,  # more friendly to backward hooks than nn.Identity(), for diagnostic reasons.
+)
+from scaling import (
+    ScaledLinear,  # not as in other dirs.. just scales down initial parameter values.
+)
+from scaling import (
+    ActivationDropoutAndLinear,
     Balancer,
     BiasNorm,
-    Dropout2,
     ChunkCausalDepthwiseConv1d,
-    ActivationDropoutAndLinear,
-    ScaledLinear,  # not as in other dirs.. just scales down initial parameter values.
+    Dropout2,
+    FloatLike,
+    ScheduledFloat,
     Whiten,
-    Identity,  # more friendly to backward hooks than nn.Identity(), for diagnostic reasons.
+    convert_num_channels,
+    limit_param_value,
     penalize_abs_values_gt,
     softmax,
-    ScheduledFloat,
-    FloatLike,
-    limit_param_value,
-    convert_num_channels,
 )
 from torch import Tensor, nn
 
@@ -147,7 +152,7 @@ class Zipformer2(EncoderInterface):
         self.chunk_size = chunk_size
         self.left_context_frames = left_context_frames
 
-        self.mid_downsample = SimpleDownsample(384, 2, dropout=dropout)
+        # self.mid_downsample = SimpleDownsample(384, 2, dropout=dropout)
 
         for u, d in zip(encoder_unmasked_dim, encoder_dim):
             assert u <= d
@@ -155,7 +160,14 @@ class Zipformer2(EncoderInterface):
         # each one will be Zipformer2Encoder or DownsampledZipformer2Encoder
         encoders = []
 
+        # zr_modified
+        self.mid_downsampling_modules = []
         num_encoders = len(downsampling_factor)
+        for i in range(num_encoders):
+            self.mid_downsampling_modules.append(
+                SimpleDownsample(encoder_dim[i], 2, dropout=dropout)
+            )
+
         for i in range(num_encoders):
             encoder_layer = Zipformer2EncoderLayer(
                 embed_dim=encoder_dim[i],
@@ -324,6 +336,8 @@ class Zipformer2(EncoderInterface):
         else:
             attn_mask = self._get_attn_mask(x, chunk_size, left_context_chunks)
 
+        selected_idx = random.randint(0, len(self.encoders) - 1)
+
         for i, module in enumerate(self.encoders):
             ds = self.downsampling_factor[i]
             x = convert_num_channels(x, self.encoder_dim[i])
@@ -341,8 +355,8 @@ class Zipformer2(EncoderInterface):
             )
             outputs.append(x)
 
-            if i == 2:
-                mid_x = self.mid_downsample(x)
+            if i == selected_idx:
+                mid_x = self.mid_downsampling_modules(x)
 
         # if the last output has the largest dimension, x will be unchanged,
         # it will be the same as outputs[-1].  Otherwise it will be concatenated
