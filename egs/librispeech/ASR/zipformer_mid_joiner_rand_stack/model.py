@@ -104,7 +104,7 @@ class AsrModel(nn.Module):
                 decoder_dim, vocab_size, initial_scale=0.25
             )
             self.mid_simple_am_projs = [
-                ScaledLinear(encoder_dim, vocab_size, initial_scale=0.25)
+                ScaledLinear(encoder_dim, vocab_size, initial_scale=0.25).cuda()
                 for encoder_dim in mid_encoder_dims[:-1]
             ]
             self.mid_simple_lm_proj = ScaledLinear(
