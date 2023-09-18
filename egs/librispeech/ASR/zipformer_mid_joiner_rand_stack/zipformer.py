@@ -165,7 +165,7 @@ class Zipformer2(EncoderInterface):
         num_encoders = len(downsampling_factor)
         for i in range(num_encoders):
             self.mid_downsampling_modules.append(
-                SimpleDownsample(encoder_dim[i], 2, dropout=dropout)
+                SimpleDownsample(encoder_dim[i], 2, dropout=dropout).cuda()
             )
 
         for i in range(num_encoders):
