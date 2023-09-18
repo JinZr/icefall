@@ -581,25 +581,32 @@ def get_decoder_model(params: AttributeDict) -> nn.Module:
 
 
 def get_joiner_model(params: AttributeDict) -> nn.Module:
+    mid_joiner = Joiner(
+        encoder_dim=384,
+        decoder_dim=params.decoder_dim,
+        joiner_dim=params.joiner_dim,
+        vocab_size=params.vocab_size,
+    )
     joiner = Joiner(
         encoder_dim=max(_to_int_tuple(params.encoder_dim)),
         decoder_dim=params.decoder_dim,
         joiner_dim=params.joiner_dim,
         vocab_size=params.vocab_size,
     )
-    return joiner
+    return mid_joiner, joiner
 
 
 def get_model(params: AttributeDict) -> nn.Module:
     encoder_embed = get_encoder_embed(params)
     encoder = get_encoder_model(params)
     decoder = get_decoder_model(params)
-    joiner = get_joiner_model(params)
+    mid_joiner, joiner = get_joiner_model(params)
 
     model = AsrModel(
         encoder_embed=encoder_embed,
         encoder=encoder,
         decoder=decoder,
+        mid_joiner=mid_joiner,
         joiner=joiner,
         encoder_dim=int(max(params.encoder_dim.split(","))),
         decoder_dim=params.decoder_dim,
