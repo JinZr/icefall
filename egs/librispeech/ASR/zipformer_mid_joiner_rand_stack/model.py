@@ -16,15 +16,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import k2
 import torch
 import torch.nn as nn
 from encoder_interface import EncoderInterface
+from scaling import ScaledLinear
 
 from icefall.utils import add_sos, make_pad_mask
-from scaling import ScaledLinear
 
 
 class AsrModel(nn.Module):
@@ -33,8 +33,9 @@ class AsrModel(nn.Module):
         encoder_embed: nn.Module,
         encoder: EncoderInterface,
         decoder: Optional[nn.Module] = None,
-        mid_joiner: Optional[nn.Module] = None,
+        mid_joiners: Optional[List[nn.Module]] = None,
         joiner: Optional[nn.Module] = None,
+        mid_encoder_dims: List[int] = [192, 256, 384, 512, 384, 256],
         encoder_dim: int = 384,
         decoder_dim: int = 512,
         vocab_size: int = 500,
@@ -93,7 +94,7 @@ class AsrModel(nn.Module):
             assert joiner is not None
 
             self.decoder = decoder
-            self.mid_joiner = mid_joiner
+            self.mid_joiners = mid_joiners
             self.joiner = joiner
 
             self.simple_am_proj = ScaledLinear(
@@ -102,10 +103,14 @@ class AsrModel(nn.Module):
             self.simple_lm_proj = ScaledLinear(
                 decoder_dim, vocab_size, initial_scale=0.25
             )
-            self.mid_simple_am_proj = ScaledLinear(384, vocab_size, initial_scale=0.25)
-            self.mid_simple_lm_proj = ScaledLinear(
-                decoder_dim, vocab_size, initial_scale=0.25
-            )
+            self.mid_simple_am_projs = [
+                ScaledLinear(encoder_dim, vocab_size, initial_scale=0.25)
+                for encoder_dim in mid_encoder_dims[:-1]
+            ]
+            self.mid_simple_lm_projs = [
+                ScaledLinear(decoder_dim, vocab_size, initial_scale=0.25)
+                for decoder_dim in range(len(mid_encoder_dims) - 1)
+            ]
         else:
             assert decoder is None
             assert joiner is None
@@ -143,7 +148,7 @@ class AsrModel(nn.Module):
         src_key_padding_mask = make_pad_mask(x_lens)
         x = x.permute(1, 0, 2)  # (N, T, C) -> (T, N, C)
 
-        mid_encoder_out, encoder_out, encoder_out_lens = self.encoder(
+        mid_encoder_out, selected_idx, encoder_out, encoder_out_lens = self.encoder(
             x, x_lens, src_key_padding_mask
         )
 
@@ -151,7 +156,7 @@ class AsrModel(nn.Module):
         mid_encoder_out = mid_encoder_out.permute(1, 0, 2)  # (T, N, C) ->(N, T, C)
         assert torch.all(encoder_out_lens > 0), (x_lens, encoder_out_lens)
 
-        return mid_encoder_out, encoder_out, encoder_out_lens
+        return mid_encoder_out, selected_idx, encoder_out, encoder_out_lens
 
     def forward_ctc(
         self,
@@ -292,6 +297,7 @@ class AsrModel(nn.Module):
     def forward_mid_transducer(
         self,
         mid_encoder_out: torch.Tensor,
+        selected_idx: int,
         encoder_out_lens: torch.Tensor,
         decoder_out: torch.Tensor,
         y: k2.RaggedTensor,
@@ -335,8 +341,8 @@ class AsrModel(nn.Module):
         boundary[:, 2] = y_lens
         boundary[:, 3] = encoder_out_lens
 
-        lm = self.mid_simple_lm_proj(decoder_out)
-        am = self.mid_simple_am_proj(mid_encoder_out)
+        lm = self.mid_simple_lm_projs[selected_idx](decoder_out)
+        am = self.mid_simple_am_projs[selected_idx](mid_encoder_out)
 
         # if self.training and random.random() < 0.25:
         #    lm = penalize_abs_values_gt(lm, 100.0, 1.0e-04)
@@ -367,8 +373,8 @@ class AsrModel(nn.Module):
         # am_pruned : [B, T, prune_range, encoder_dim]
         # lm_pruned : [B, T, prune_range, decoder_dim]
         am_pruned, lm_pruned = k2.do_rnnt_pruning(
-            am=self.mid_joiner.encoder_proj(mid_encoder_out),
-            lm=self.mid_joiner.decoder_proj(decoder_out),
+            am=self.mid_joiners[selected_idx].encoder_proj(mid_encoder_out),
+            lm=self.mid_joiners[selected_idx].decoder_proj(decoder_out),
             ranges=ranges,
         )
 
@@ -376,7 +382,9 @@ class AsrModel(nn.Module):
 
         # project_input=False since we applied the decoder's input projections
         # prior to do_rnnt_pruning (this is an optimization for speed).
-        logits = self.mid_joiner(am_pruned, lm_pruned, project_input=False)
+        logits = self.mid_joiners[selected_idx](
+            am_pruned, lm_pruned, project_input=False
+        )
 
         with torch.cuda.amp.autocast(enabled=False):
             pruned_loss = k2.rnnt_loss_pruned(
@@ -435,7 +443,12 @@ class AsrModel(nn.Module):
         assert x.size(0) == x_lens.size(0) == y.dim0, (x.shape, x_lens.shape, y.dim0)
 
         # Compute encoder outputs
-        mid_encoder_out, encoder_out, encoder_out_lens = self.forward_encoder(x, x_lens)
+        (
+            mid_encoder_out,
+            selected_idx,
+            encoder_out,
+            encoder_out_lens,
+        ) = self.forward_encoder(x, x_lens)
 
         row_splits = y.shape.row_splits(1)
         y_lens = row_splits[1:] - row_splits[:-1]

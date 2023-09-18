@@ -606,19 +606,22 @@ def get_decoder_model(params: AttributeDict) -> nn.Module:
 
 
 def get_joiner_model(params: AttributeDict) -> nn.Module:
-    mid_joiner = Joiner(
-        encoder_dim=384,
-        decoder_dim=params.decoder_dim,
-        joiner_dim=params.joiner_dim,
-        vocab_size=params.vocab_size,
-    )
+    mid_joiners = [
+        Joiner(
+            encoder_dim=encoder_dim,
+            decoder_dim=params.decoder_dim,
+            joiner_dim=params.joiner_dim,
+            vocab_size=params.vocab_size,
+        )
+        for encoder_dim in _to_int_tuple(params.encoder_dim)[:-1]
+    ]
     joiner = Joiner(
         encoder_dim=max(_to_int_tuple(params.encoder_dim)),
         decoder_dim=params.decoder_dim,
         joiner_dim=params.joiner_dim,
         vocab_size=params.vocab_size,
     )
-    return mid_joiner, joiner
+    return mid_joiners, joiner
 
 
 def get_model(params: AttributeDict) -> nn.Module:
@@ -633,16 +636,16 @@ def get_model(params: AttributeDict) -> nn.Module:
 
     if params.use_transducer:
         decoder = get_decoder_model(params)
-        mid_joiner, joiner = get_joiner_model(params)
+        mid_joiners, joiner = get_joiner_model(params)
     else:
         decoder = None
-        mid_joiner, joiner = None, None
+        mid_joiners, joiner = None, None
 
     model = AsrModel(
         encoder_embed=encoder_embed,
         encoder=encoder,
         decoder=decoder,
-        mid_joiner=mid_joiner,
+        mid_joiners=mid_joiners,
         joiner=joiner,
         encoder_dim=max(_to_int_tuple(params.encoder_dim)),
         decoder_dim=params.decoder_dim,
