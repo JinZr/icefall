@@ -336,7 +336,7 @@ class Zipformer2(EncoderInterface):
         else:
             attn_mask = self._get_attn_mask(x, chunk_size, left_context_chunks)
 
-        selected_idx = random.randint(0, len(self.encoders) - 1)
+        selected_idx = random.randint(0, len(self.encoders) - 2)
 
         for i, module in enumerate(self.encoders):
             ds = self.downsampling_factor[i]
