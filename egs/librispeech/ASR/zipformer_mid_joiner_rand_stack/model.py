@@ -107,10 +107,9 @@ class AsrModel(nn.Module):
                 ScaledLinear(encoder_dim, vocab_size, initial_scale=0.25)
                 for encoder_dim in mid_encoder_dims[:-1]
             ]
-            self.mid_simple_lm_projs = [
-                ScaledLinear(decoder_dim, vocab_size, initial_scale=0.25)
-                for decoder_dim in range(len(mid_encoder_dims) - 1)
-            ]
+            self.mid_simple_lm_proj = ScaledLinear(
+                decoder_dim, vocab_size, initial_scale=0.25
+            )
         else:
             assert decoder is None
             assert joiner is None
@@ -341,7 +340,7 @@ class AsrModel(nn.Module):
         boundary[:, 2] = y_lens
         boundary[:, 3] = encoder_out_lens
 
-        lm = self.mid_simple_lm_projs[selected_idx](decoder_out)
+        lm = self.mid_simple_lm_proj(decoder_out)
         am = self.mid_simple_am_projs[selected_idx](mid_encoder_out)
 
         # if self.training and random.random() < 0.25:
