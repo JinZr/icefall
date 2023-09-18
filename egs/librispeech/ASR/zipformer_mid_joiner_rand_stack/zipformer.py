@@ -336,7 +336,7 @@ class Zipformer2(EncoderInterface):
         else:
             attn_mask = self._get_attn_mask(x, chunk_size, left_context_chunks)
 
-        selected_idx = random.randint(0, len(self.encoders) - 2)
+        selected_idx = random.randint(0, len(self.encoders) - 1)
 
         for i, module in enumerate(self.encoders):
             ds = self.downsampling_factor[i]
@@ -356,7 +356,7 @@ class Zipformer2(EncoderInterface):
             outputs.append(x)
 
             if i == selected_idx:
-                mid_x = self.mid_downsampling_modules(x)
+                mid_x = self.mid_downsampling_modules[selected_idx](x)
 
         # if the last output has the largest dimension, x will be unchanged,
         # it will be the same as outputs[-1].  Otherwise it will be concatenated
