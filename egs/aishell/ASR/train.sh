@@ -1,4 +1,4 @@
-./zipformer/train.py \
+./zipformer_mid_joiner/train.py \
     --world-size 2 \
     --num-epochs 60 \
     --use-fp16 1 \
