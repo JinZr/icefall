@@ -612,7 +612,7 @@ def get_joiner_model(params: AttributeDict) -> nn.Module:
             decoder_dim=params.decoder_dim,
             joiner_dim=params.joiner_dim,
             vocab_size=params.vocab_size,
-        )
+        ).cuda()
         for encoder_dim in _to_int_tuple(params.encoder_dim)[:-1]
     ]
     joiner = Joiner(
