@@ -470,6 +470,7 @@ class AsrModel(nn.Module):
         if self.use_mid_rnnt_loss:
             mid_simple_loss, mid_pruned_loss = self.forward_mid_transducer(
                 mid_encoder_out=mid_encoder_out,
+                selected_idx=selected_idx,
                 encoder_out_lens=encoder_out_lens,
                 decoder_out=decoder_out,
                 y=y.to(x.device),
