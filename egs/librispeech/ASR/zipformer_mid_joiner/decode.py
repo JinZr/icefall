@@ -384,6 +384,11 @@ def get_parser():
         default=0.3,
     )
     parser.add_argument(
+        "--mid-encoder-dim",
+        type=int,
+        required=True,
+    )
+    parser.add_argument(
         "--use-mid-enc-output",
         type=str2bool,
         default=False,

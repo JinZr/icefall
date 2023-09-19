@@ -3,8 +3,8 @@
     --num-epochs 60 \
     --use-fp16 1 \
     --context-size 1 \
-    --max-duration 1000 \
-    --exp-dir ./zipformer/exp-0.3-init \
+    --max-duration 900 \
+    --exp-dir ./zipformer_mid_joiner/exp-0.3-init \
     --enable-musan 0 \
     --base-lr 0.045 \
     --lr-batches 7500 \
