@@ -192,7 +192,7 @@ class AishellAsrDataModule:
             The state dict for the training sampler.
         """
         logging.info("About to get Musan cuts")
-        cuts_musan = load_manifest(self.args.manifest_dir / "musan_cuts.jsonl.gz")
+        cuts_musan = None # load_manifest(self.args.manifest_dir / "musan_cuts.jsonl.gz")
 
         transforms = []
         if self.args.enable_musan:
