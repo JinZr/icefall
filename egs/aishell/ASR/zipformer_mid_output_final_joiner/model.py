@@ -274,11 +274,18 @@ class AsrModel(nn.Module):
 
         # am_pruned : [B, T, prune_range, encoder_dim]
         # lm_pruned : [B, T, prune_range, decoder_dim]
-        am_pruned, lm_pruned = k2.do_rnnt_pruning(
-            am=self.joiner.encoder_proj(encoder_out),
-            lm=self.joiner.decoder_proj(decoder_out),
-            ranges=ranges,
-        )
+        if not is_mid_encoder_out:
+            am_pruned, lm_pruned = k2.do_rnnt_pruning(
+                am=self.joiner.encoder_proj(encoder_out),
+                lm=self.joiner.decoder_proj(decoder_out),
+                ranges=ranges,
+            )
+        else:
+            am_pruned, lm_pruned = k2.do_rnnt_pruning(
+                am=self.joiner.mid_encoder_proj(encoder_out),
+                lm=self.joiner.decoder_proj(decoder_out),
+                ranges=ranges,
+            )
 
         # logits : [B, T, prune_range, vocab_size]
 
