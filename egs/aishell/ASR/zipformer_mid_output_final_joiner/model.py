@@ -222,8 +222,9 @@ class AsrModel(nn.Module):
         sos_y_padded = sos_y.pad(mode="constant", padding_value=blank_id)
 
         # decoder_out: [B, S + 1, decoder_dim]
-        decoder_out = self.decoder(sos_y_padded)
-        if is_mid_encoder_out:
+        if not is_mid_encoder_out:
+            decoder_out = self.decoder(sos_y_padded)
+        else:
             decoder_out = decoder_out.detach()
 
         # Note: y does not start with SOS
