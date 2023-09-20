@@ -187,6 +187,7 @@ class AsrModel(nn.Module):
         self,
         encoder_out: torch.Tensor,
         encoder_out_lens: torch.Tensor,
+        decoder_out: Optional[torch.Tensor],
         y: k2.RaggedTensor,
         y_lens: torch.Tensor,
         prune_range: int = 5,
@@ -352,6 +353,7 @@ class AsrModel(nn.Module):
             simple_loss, pruned_loss, decoder_out = self.forward_transducer(
                 encoder_out=encoder_out,
                 encoder_out_lens=encoder_out_lens,
+                decoder_out=None,
                 y=y.to(x.device),
                 y_lens=y_lens,
                 prune_range=prune_range,
