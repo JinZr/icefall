@@ -309,6 +309,12 @@ def get_parser():
         type=float,
         default=0.3,
     )
+    parser.add_argument(
+        "--mid-encoder-dim",
+        type=int,
+        required=True,
+        help="384 for medium scaled zipformer, 512 for large scaled zipformer",
+    )
 
     add_model_arguments(parser)
 

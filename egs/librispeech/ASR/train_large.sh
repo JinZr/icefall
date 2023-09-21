@@ -10,5 +10,6 @@
     --max-duration 1000 \
     --mid-rnnt-loss-scale 0.3 \
     --master-port 2414 \
-    --mid-encoder-dim 512
+    --mid-encoder-dim 512 \
+    --start-epoch 31
 
