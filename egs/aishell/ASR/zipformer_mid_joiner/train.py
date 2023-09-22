@@ -454,6 +454,12 @@ def get_parser():
         type=float,
         default=0.3,
     )
+    parser.add_argument(
+        "--mid-encoder-dim",
+        type=int,
+        required=True,
+        help="384 for medium scaled zipformer, 512 for large scaled zipformer",
+    )
 
     add_model_arguments(parser)
 
@@ -582,7 +588,7 @@ def get_decoder_model(params: AttributeDict) -> nn.Module:
 
 def get_joiner_model(params: AttributeDict) -> nn.Module:
     mid_joiner = Joiner(
-        encoder_dim=384,
+        encoder_dim=params.mid_encoder_dim,
         decoder_dim=params.decoder_dim,
         joiner_dim=params.joiner_dim,
         vocab_size=params.vocab_size,
@@ -608,6 +614,7 @@ def get_model(params: AttributeDict) -> nn.Module:
         decoder=decoder,
         mid_joiner=mid_joiner,
         joiner=joiner,
+        mid_encoder_dim=params.mid_encoder_dim,
         encoder_dim=int(max(params.encoder_dim.split(","))),
         decoder_dim=params.decoder_dim,
         vocab_size=params.vocab_size,

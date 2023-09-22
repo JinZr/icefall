@@ -35,6 +35,7 @@ class AsrModel(nn.Module):
         decoder: Optional[nn.Module] = None,
         mid_joiner: Optional[nn.Module] = None,
         joiner: Optional[nn.Module] = None,
+        mid_encoder_dim: int = 384,
         encoder_dim: int = 384,
         decoder_dim: int = 512,
         vocab_size: int = 500,
@@ -102,7 +103,9 @@ class AsrModel(nn.Module):
             self.simple_lm_proj = ScaledLinear(
                 decoder_dim, vocab_size, initial_scale=0.25
             )
-            self.mid_simple_am_proj = ScaledLinear(384, vocab_size, initial_scale=0.25)
+            self.mid_simple_am_proj = ScaledLinear(
+                mid_encoder_dim, vocab_size, initial_scale=0.25
+            )
             self.mid_simple_lm_proj = ScaledLinear(
                 decoder_dim, vocab_size, initial_scale=0.25
             )
