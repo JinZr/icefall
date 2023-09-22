@@ -258,6 +258,13 @@ def add_model_arguments(parser: argparse.ArgumentParser):
         help="If True, use CTC head.",
     )
 
+    parser.add_argument(
+        "--mid-encoder-dim",
+        type=int,
+        required=True,
+        help="384 for medium scaled zipformer, 512 for large scaled zipformer",
+    )
+
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -625,6 +632,7 @@ def get_model(params: AttributeDict) -> nn.Module:
         encoder=encoder,
         decoder=decoder,
         joiner=joiner,
+        mid_encoder_dim=params.mid_encoder_dim,
         encoder_dim=max(_to_int_tuple(params.encoder_dim)),
         decoder_dim=params.decoder_dim,
         vocab_size=params.vocab_size,

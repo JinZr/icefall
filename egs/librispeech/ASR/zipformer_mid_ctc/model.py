@@ -34,6 +34,7 @@ class AsrModel(nn.Module):
         encoder: EncoderInterface,
         decoder: Optional[nn.Module] = None,
         joiner: Optional[nn.Module] = None,
+        mid_encoder_dim: int = 384,
         encoder_dim: int = 384,
         decoder_dim: int = 512,
         vocab_size: int = 500,
@@ -107,7 +108,7 @@ class AsrModel(nn.Module):
             # Modules for CTC head
             self.ctc_output = nn.Sequential(
                 nn.Dropout(p=0.1),
-                nn.Linear(384, vocab_size),
+                nn.Linear(mid_encoder_dim, vocab_size),
                 nn.LogSoftmax(dim=-1),
             )
 
