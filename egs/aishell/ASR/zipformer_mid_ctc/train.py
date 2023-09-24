@@ -273,6 +273,20 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--use-ctc",
+        type=str2bool,
+        default=False,
+        help="If True, use CTC head.",
+    )
+
+    parser.add_argument(
+        "--ctc-loss-scale",
+        type=float,
+        default=0.2,
+        help="Scale for CTC loss.",
+    )
+
+    parser.add_argument(
         "--start-epoch",
         type=int,
         default=1,
