@@ -273,6 +273,13 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--use-transducer",
+        type=str2bool,
+        default=True,
+        help="If True, use Transducer head.",
+    )
+
+    parser.add_argument(
         "--use-ctc",
         type=str2bool,
         default=False,
