@@ -309,6 +309,11 @@ def get_parser():
         type=float,
         default=0.3,
     )
+    parser.add_argument(
+        "--mid-encoder-dim",
+        type=int,
+        required=True,
+    )
 
     add_model_arguments(parser)
 

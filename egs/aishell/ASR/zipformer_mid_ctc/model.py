@@ -39,7 +39,7 @@ class AsrModel(nn.Module):
         decoder_dim: int = 512,
         vocab_size: int = 500,
         use_transducer: bool = True,
-        use_ctc: bool = False,
+        use_ctc: bool = True,
     ):
         """A joint CTC & Transducer ASR model.
 
