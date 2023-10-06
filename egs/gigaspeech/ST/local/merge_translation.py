@@ -61,7 +61,9 @@ if __name__ == "__main__":
                     cntr += 1
                     try:
                         if idx == 0:
-                            segments[seg["sid"]] = {f"{language}", seg["text_raw"]}
+                            segments[seg["sid"]] = {
+                                f"{language}": seg["text_raw"],
+                            }
                         else:
                             segments[seg["sid"]][f"{language}"] = seg["text_raw"]
                     except:
@@ -70,6 +72,6 @@ if __name__ == "__main__":
             logging.info(f"Loading {manifests}.")
             manifests = load_manifest_lazy(manifests)
             for manifest in tqdm(manifests):
-                manifest.custom = segments[manifest.id]
+                manifest.custom = segments[manifest.supervisions[0].id]
 
             manifests.to_file(output)
