@@ -29,7 +29,6 @@ def get_parser():
         "translations",
         type=str,
         nargs="+",
-        required=True,
         help="The translation files.",
     )
     return parser
