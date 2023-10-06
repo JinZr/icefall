@@ -33,6 +33,9 @@ def get_parser():
 
 
 if __name__ == "__main__":
+    formatter = "%(asctime)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s"
+    logging.basicConfig(format=formatter, level=logging.INFO)
+
     parser = get_parser()
     args = parser.parse_args()
     manifests = args.manifests
@@ -51,9 +54,11 @@ if __name__ == "__main__":
             segments = dict()
 
             logging.info(f"Processing {translation}.")
+            cntr = 0
             for audio in tqdm(audios):
                 segs = audio["segments"]
                 for seg in segs:
+                    cntr += 1
                     try:
                         if idx == 0:
                             segments[seg["sid"]] = {f"{language}", seg["text_raw"]}
@@ -61,7 +66,7 @@ if __name__ == "__main__":
                             segments[seg["sid"]][f"{language}"] = seg["text_raw"]
                     except:
                         continue
-
+            logging.info(f"Processed {cntr} segments.")
             logging.info(f"Loading {manifests}.")
             manifests = load_manifest_lazy(manifests)
             for manifest in tqdm(manifests):
