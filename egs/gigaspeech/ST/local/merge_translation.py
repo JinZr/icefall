@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+from pathlib import Path
 
 from lhotse import CutSet, load_manifest_lazy
 from tqdm import tqdm
@@ -18,7 +19,7 @@ def get_parser():
         help="The input manifests to be merged.",
     )
     parser.add_argument(
-        "--output",
+        "--output-path",
         type=str,
         required=True,
         help="The output merged manifest.",
@@ -38,8 +39,8 @@ if __name__ == "__main__":
 
     parser = get_parser()
     args = parser.parse_args()
-    manifests = args.manifests
-    output = args.output
+    manifests = Path(args.manifests)
+    output_path = Path(args.output_path)
     translations = args.translations
 
     logging.info(f"Merging {translations} into {manifests}.")
@@ -66,16 +67,19 @@ if __name__ == "__main__":
                     else:
                         segments[seg["sid"]][f"{language}"] = seg["text_raw"]
             logging.info(f"Processed {cntr} segments.")
-    logging.info(f"Loading {manifests}.")
-    manifests = load_manifest_lazy(manifests)
-    cuts = dict()
-    err_cntr = 0
-    for cut in tqdm(manifests):
-        try:
-            cut.custom = segments[cut.supervisions[0].id]
-            cuts[cut.id] = cut
-        except KeyError:
-            err_cntr += 1
-            continue
-    logging.info(f"Failed to find {err_cntr} segments.")
-    CutSet(cuts=cuts).to_file(output)
+            logging.info(f"Loading {manifests}.")
+            manifests = load_manifest_lazy(manifests)
+            cuts = dict()
+            err_cntr = 0
+            for cut in tqdm(manifests):
+                try:
+                    cut.custom = segments[cut.supervisions[0].id]
+                    cuts[cut.id] = cut
+                except KeyError:
+                    err_cntr += 1
+                    continue
+            logging.info(f"Failed to find {err_cntr} segments.")
+
+            output_fname = f"{output_path.stem}_{language}.json.gz"
+            CutSet(cuts=cuts).to_file(output_path / output_fname)
+            logging.info(f"Saved merged manifest to {output_path / output_fname}.")
