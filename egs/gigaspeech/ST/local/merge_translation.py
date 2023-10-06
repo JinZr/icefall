@@ -2,9 +2,7 @@ import argparse
 import json
 import logging
 
-import lhotse
 from lhotse import load_manifest_lazy
-from lhotse.utils import Pathlike
 from tqdm import tqdm
 
 
@@ -52,7 +50,8 @@ if __name__ == "__main__":
             audios = translation["audios"]
             segments = dict()
 
-            for audio in tqdm(audios, desc=f"Processing {translation}."):
+            logging.info(f"Processing {translation}.")
+            for audio in tqdm(audios):
                 segs = audio["segments"]
                 for seg in segs:
                     if idx == 0:
@@ -60,8 +59,9 @@ if __name__ == "__main__":
                     else:
                         segments[seg["sid"]][f"{language}"] = seg["text_raw"]
 
+            logging.info(f"Loading {manifests}.")
             manifests = load_manifest_lazy(manifests)
-            for manifest in tqdm(manifests, desc=f"Processing manifests."):
+            for manifest in tqdm(manifests):
                 manifest.custom = segments[manifest.id]
 
             manifests.to_file(output)
