@@ -2,7 +2,7 @@ import argparse
 import json
 import logging
 
-from lhotse import load_manifest_lazy
+from lhotse import CutSet, load_manifest_lazy
 from tqdm import tqdm
 
 
@@ -59,19 +59,23 @@ if __name__ == "__main__":
                 segs = audio["segments"]
                 for seg in segs:
                     cntr += 1
-                    try:
-                        if idx == 0:
-                            segments[seg["sid"]] = {
-                                f"{language}": seg["text_raw"],
-                            }
-                        else:
-                            segments[seg["sid"]][f"{language}"] = seg["text_raw"]
-                    except:
-                        continue
+                    if idx == 0:
+                        segments[seg["sid"]] = {
+                            f"{language}": seg["text_raw"],
+                        }
+                    else:
+                        segments[seg["sid"]][f"{language}"] = seg["text_raw"]
             logging.info(f"Processed {cntr} segments.")
-            logging.info(f"Loading {manifests}.")
-            manifests = load_manifest_lazy(manifests)
-            for manifest in tqdm(manifests):
-                manifest.custom = segments[manifest.supervisions[0].id]
-
-            manifests.to_file(output)
+    logging.info(f"Loading {manifests}.")
+    manifests = load_manifest_lazy(manifests)
+    cuts = dict()
+    err_cntr = 0
+    for cut in tqdm(manifests):
+        try:
+            cut.custom = segments[cut.supervisions[0].id]
+            cuts[cut.id] = cut
+        except KeyError:
+            err_cntr += 1
+            continue
+    logging.info(f"Failed to find {err_cntr} segments.")
+    CutSet(cuts=cuts).to_file(output)
