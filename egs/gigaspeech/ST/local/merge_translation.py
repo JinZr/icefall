@@ -54,10 +54,13 @@ if __name__ == "__main__":
             for audio in tqdm(audios):
                 segs = audio["segments"]
                 for seg in segs:
-                    if idx == 0:
-                        segments[seg["sid"]] = {f"{language}", seg["text_raw"]}
-                    else:
-                        segments[seg["sid"]][f"{language}"] = seg["text_raw"]
+                    try:
+                        if idx == 0:
+                            segments[seg["sid"]] = {f"{language}", seg["text_raw"]}
+                        else:
+                            segments[seg["sid"]][f"{language}"] = seg["text_raw"]
+                    except:
+                        continue
 
             logging.info(f"Loading {manifests}.")
             manifests = load_manifest_lazy(manifests)
