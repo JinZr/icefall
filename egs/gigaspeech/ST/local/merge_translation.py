@@ -53,7 +53,7 @@ if __name__ == "__main__":
             audios = translation["audios"]
             segments = dict()
 
-            logging.info(f"Processing {translation}.")
+            logging.info(f"Processing {language}.")
             cntr = 0
             for audio in tqdm(audios):
                 segs = audio["segments"]
