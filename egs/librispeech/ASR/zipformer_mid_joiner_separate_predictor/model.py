@@ -398,7 +398,7 @@ class AsrModel(nn.Module):
                 reduction="sum",
             )
 
-        return simple_loss, pruned_loss
+        return simple_loss, pruned_loss, decoder_out
 
     def forward(
         self,
