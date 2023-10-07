@@ -297,6 +297,17 @@ def get_parser():
         [batch_size, vocab] and blank id is 0).
         """,
     )
+    parser.add_argument(
+        "--use-ctc",
+        type=str2bool,
+        default=False,
+        help="If True, use CTC head.",
+    )
+    parser.add_argument(
+        "--mid-encoder-dim",
+        type=int,
+        default=True,
+    )
     add_model_arguments(parser)
 
     return parser

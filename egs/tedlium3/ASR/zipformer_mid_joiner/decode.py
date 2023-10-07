@@ -301,6 +301,24 @@ def get_parser():
         fast_beam_search_nbest_LG, and fast_beam_search_nbest_oracle""",
     )
 
+    # ZR edited
+    parser.add_argument(
+        "--use-mid-rnnt-loss",
+        type=str2bool,
+        default=True,
+    )
+    parser.add_argument(
+        "--mid-rnnt-loss-scale",
+        type=float,
+        default=0.3,
+    )
+    parser.add_argument(
+        "--mid-encoder-dim",
+        type=int,
+        required=True,
+        help="384 for medium scaled zipformer, 512 for large scaled zipformer",
+    )
+
     add_model_arguments(parser)
 
     return parser
@@ -370,7 +388,7 @@ def decode_one_batch(
     src_key_padding_mask = make_pad_mask(x_lens)
     x = x.permute(1, 0, 2)  # (N, T, C) -> (T, N, C)
 
-    encoder_out, encoder_out_lens = model.encoder(x, x_lens, src_key_padding_mask)
+    mid_encoder_out, encoder_out, encoder_out_lens = model.encoder(x, x_lens, src_key_padding_mask)
     encoder_out = encoder_out.permute(1, 0, 2)  # (T, N, C) ->(N, T, C)
 
     hyps = []

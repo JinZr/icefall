@@ -793,7 +793,6 @@ def compute_loss(
             prune_range=params.prune_range,
             am_scale=params.am_scale,
             lm_scale=params.lm_scale,
-            rnnt_type=params.rnnt_type,
         )
 
         s = params.simple_loss_scale
