@@ -168,12 +168,42 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
 
     if [ -d "../../librispeech/ASR/data/lang_phone" ]; then
         cd data/
+        log "Copying phone based lang from ../../librispeech/ASR/data/lang_phone due to the upcomming overwrite"
         cp -r $(realpath ../../../librispeech/ASR/data/lang_phone) .
         cd ..
     else
         log "Abort! Please run ../../librispeech/ASR/prepare.sh --stage 5 --stop-stage 5 first"
         exit 1
     fi
+
+    if [ -d "../../librispeech/ASR/download/lm" ]; then
+        mkdir download
+        cd download
+        ln -svf $(realpath ../../../librispeech/ASR/download/lm) .
+        cd ..
+    else
+        log "Abort! Please run ../../librispeech/ASR/local/download_lm.py --out-dir ../../librispeech/ASR/download/lm first"
+        exit 1
+    fi
+
+    lang_dir=data/lang_phone
+    (echo '!SIL SIL'; echo '<SPOKEN_NOISE> SPN'; echo '<UNK> SPN'; echo '<sc> <sc>';) |
+    cat - $dl_dir/lm/librispeech-lexicon.txt |
+    sort | uniq > $lang_dir/lexicon.txt
+
+    ./local/prepare_lang.py --lang-dir $lang_dir
+
+    log "Converting L.pt to L.fst"
+    ./shared/convert-k2-to-openfst.py \
+      --olabels aux_labels \
+      $lang_dir/L.pt \
+      $lang_dir/L.fst
+    
+    log "Converting L_disambig.pt to L_disambig.fst"
+    ./shared/convert-k2-to-openfst.py \
+      --olabels aux_labels \
+      $lang_dir/L_disambig.pt \
+      $lang_dir/L_disambig.fst
 fi
 
 if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
