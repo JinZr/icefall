@@ -159,8 +159,10 @@ if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
             <(gunzip -c data/fbank/librimix_2mix_cuts_train-360.jsonl.gz) | \
             shuf | gzip -c > data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz
         fi
+        gunzip -c data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz | \
+        jq '.supervisions[0].text' | sed 's/"//g' > data/fbank/text
+        touch ./data/fbank/.librimix.done
     fi
-
 fi
 
 if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
@@ -263,13 +265,27 @@ if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
   # it using: pip install kaldilm
 
   mkdir -p data/lm
+  if [ ! -f ./data/lm/G_3_gram.arpa ]; then
+    ./shared/make_kn_lm.py \
+        -ngram-order 3 \
+        -text ./data/fbank/text \
+        -lm ./data/lm/G_3_gram.arpa
+  fi
+
+  if [ ! -f ./data/lm/G_4_gram.arpa ]; then
+    ./shared/make_kn_lm.py \
+        -ngram-order 4 \
+        -text ./data/fbank/text \
+        -lm ./data/lm/G_4_gram.arpa
+  fi
+
   if [ ! -f data/lm/G_3_gram.fst.txt ]; then
     # It is used in building HLG
     python3 -m kaldilm \
       --read-symbol-table="data/lang_bpe_500/words.txt" \
       --disambig-symbol='#0' \
       --max-order=3 \
-      $dl_dir/lm/3-gram.pruned.1e-7.arpa > data/lm/G_3_gram.fst.txt
+      ./data/lm/G_3_gram.arpa > data/lm/G_3_gram.fst.txt
   fi
 
   if [ ! -f data/lm/G_4_gram.fst.txt ]; then
@@ -278,7 +294,7 @@ if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
       --read-symbol-table="data/lang_bpe_500/words.txt" \
       --disambig-symbol='#0' \
       --max-order=4 \
-      $dl_dir/lm/4-gram.arpa > data/lm/G_4_gram.fst.txt
+      ./data/lm/G_4_gram.arpa > data/lm/G_4_gram.fst.txt
   fi
 fi
 
