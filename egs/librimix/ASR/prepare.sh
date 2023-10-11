@@ -87,7 +87,9 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
     mkdir -p data/manifests
     cd LibriMix
 
-    ln -s ../local/metadta_Libri2Mix_offset metadata/Libri2Mix_offset
+    if [ ! -d metadata/Libri2Mix_offset ]; then
+        ln -s ../../../local/metadta_Libri2Mix_offset metadata/Libri2Mix_offset
+    fi
     patch scripts/create_librimix_from_metadata.py \
       -i ../local/create_librimix_from_metadata.patch
 
