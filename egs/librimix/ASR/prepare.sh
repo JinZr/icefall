@@ -169,7 +169,9 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
     if [ -d "../../librispeech/ASR/data/lang_phone" ]; then
         cd data/
         log "Copying phone based lang from ../../librispeech/ASR/data/lang_phone due to the upcomming overwrite"
-        cp -r $(realpath ../../../librispeech/ASR/data/lang_phone) .
+        if [ -d "./lang_phone" ]; then
+            cp -r $(realpath ../../../librispeech/ASR/data/lang_phone) .
+        fi
         cd ..
     else
         log "Abort! Please run ../../librispeech/ASR/prepare.sh --stage 5 --stop-stage 5 first"
@@ -177,9 +179,11 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
     fi
 
     if [ -d "../../librispeech/ASR/download/lm" ]; then
-        mkdir download
+        mkdir -p download
         cd download
-        ln -svf $(realpath ../../../librispeech/ASR/download/lm) .
+        if [ -f "./lm" ]; then
+            ln -svf $(realpath ../../../librispeech/ASR/download/lm) .
+        fi
         cd ..
     else
         log "Abort! Please run ../../librispeech/ASR/local/download_lm.py --out-dir ../../librispeech/ASR/download/lm first"
