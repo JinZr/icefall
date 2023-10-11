@@ -64,8 +64,8 @@ if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
         lhotse download librispeech --full $dl_dir
     fi
 
-    if [ ! -d $dl_dir/LibriMix ]; then
-        git clone https://github.com/JorisCos/LibriMix
+    if [ ! -d LibriMix ]; then
+        git clone https://github.com/JorisCos/LibriMix LibriMix
         log "We assume your python env fulfills the requirements of LibriMix"
     fi
 
@@ -86,7 +86,28 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
     # to $dl_dir/LibriSpeech. 
     mkdir -p data/manifests
     cd LibriMix
-    bash generate_librimix.sh $dl_dir
+
+    ln -s ../local/metadta_Libri2Mix_offset metadata/Libri2Mix_offset
+    patch scripts/create_librimix_from_metadata.py \
+      -i ../local/create_librimix_from_metadata.patch
+
+    # bash generate_librimix.sh $dl_dir
+        # simulate 2mix data with a random overlap offset about 1-1.5s
+    # only support 2mix data currently
+    for n_src in 2;
+    do
+        metadata_dir=metadata/Libri${n_src}"Mix"_offset
+        python scripts/create_librimix_from_metadata.py \
+            --librispeech_dir ${dl_dir}/LibriSpeech \
+            --wham_dir ${dl_dir}/wham_noise \
+            --metadata_dir ${metadata_dir} \
+            --librimix_outdir ${dl_dir} \
+            --n_src ${n_src} \
+            --freqs "16k" \
+            --modes "max" \
+            --types mix_clean mix_both mix_single
+     done
+
     cd ..
 fi
 
