@@ -195,7 +195,9 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
     if [ -d "../../librispeech/ASR/data/lang_phone" ]; then
         cd data/
         log "Copying phone based lang from ../../librispeech/ASR/data/lang_phone due to the upcomming overwrite"
-        cp -r $(realpath ../../../librispeech/ASR/data/lang_phone) .
+        if [ -d "./lang_phone" ]; then
+            cp -r $(realpath ../../../librispeech/ASR/data/lang_phone) .
+        fi
         cd ..
     else
         log "Abort! Please run ../../librispeech/ASR/prepare.sh --stage 5 --stop-stage 5 first"
@@ -203,9 +205,11 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
     fi
 
     if [ -d "../../librispeech/ASR/download/lm" ]; then
-        mkdir download
+        mkdir -p download
         cd download
-        ln -svf $(realpath ../../../librispeech/ASR/download/lm) .
+        if [ -f "./lm" ]; then
+            ln -svf $(realpath ../../../librispeech/ASR/download/lm) .
+        fi
         cd ..
     else
         log "Abort! Please run ../../librispeech/ASR/local/download_lm.py --out-dir ../../librispeech/ASR/download/lm first"
@@ -241,7 +245,6 @@ if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
         # We reuse words.txt from phone based lexicon
         # so that the two can share G.pt later.
         cp data/lang_phone/words.txt $lang_dir
-        cat 
 
         if [ ! -f $lang_dir/transcript_words.txt ]; then
             gunzip -c data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz \
