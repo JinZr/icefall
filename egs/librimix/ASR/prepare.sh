@@ -85,10 +85,11 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
     # We assume that you have downloaded the LibriSpeech corpus
     # to $dl_dir/LibriSpeech. 
     mkdir -p data/manifests
+    offset_dir=$(pwd)/local/metadta_Libri2Mix_offset/
     cd LibriMix
 
     if [ ! -d metadata/Libri2Mix_offset ]; then
-        ln -s ../../../local/metadta_Libri2Mix_offset metadata/Libri2Mix_offset
+        ln -s ${offset_dir} metadata/Libri2Mix_offset
     fi
     patch scripts/create_librimix_from_metadata.py \
       -i ../local/create_librimix_from_metadata.patch
