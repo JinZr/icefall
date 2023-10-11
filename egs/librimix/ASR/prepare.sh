@@ -64,8 +64,8 @@ if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
         lhotse download librispeech --full $dl_dir
     fi
 
-    if [ ! -d $dl_dir/LibriMix ]; then
-        git clone https://github.com/JorisCos/LibriMix
+    if [ ! -d LibriMix ]; then
+        git clone https://github.com/JorisCos/LibriMix LibriMix
         log "We assume your python env fulfills the requirements of LibriMix"
     fi
 
@@ -86,7 +86,28 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
     # to $dl_dir/LibriSpeech. 
     mkdir -p data/manifests
     cd LibriMix
-    bash generate_librimix.sh $dl_dir
+
+    ln -s ../local/metadta_Libri2Mix_offset metadata/Libri2Mix_offset
+    patch scripts/create_librimix_from_metadata.py \
+      -i ../local/create_librimix_from_metadata.patch
+
+    # bash generate_librimix.sh $dl_dir
+        # simulate 2mix data with a random overlap offset about 1-1.5s
+    # only support 2mix data currently
+    for n_src in 2;
+    do
+        metadata_dir=metadata/Libri${n_src}"Mix"_offset
+        python scripts/create_librimix_from_metadata.py \
+            --librispeech_dir ${dl_dir}/LibriSpeech \
+            --wham_dir ${dl_dir}/wham_noise \
+            --metadata_dir ${metadata_dir} \
+            --librimix_outdir ${dl_dir} \
+            --n_src ${n_src} \
+            --freqs "16k" \
+            --modes "max" \
+            --types mix_clean mix_both mix_single
+     done
+
     cd ..
 fi
 
@@ -159,8 +180,10 @@ if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
             <(gunzip -c data/fbank/librimix_2mix_cuts_train-360.jsonl.gz) | \
             shuf | gzip -c > data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz
         fi
+        gunzip -c data/fbank/librimix_2mix_cuts_train-all-shuf.jsonl.gz | \
+        jq '.supervisions[0].text' | sed 's/"//g' > data/fbank/text
+        touch ./data/fbank/.librimix.done
     fi
-
 fi
 
 if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
@@ -266,13 +289,27 @@ if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
   # it using: pip install kaldilm
 
   mkdir -p data/lm
+  if [ ! -f ./data/lm/G_3_gram.arpa ]; then
+    ./shared/make_kn_lm.py \
+        -ngram-order 3 \
+        -text ./data/fbank/text \
+        -lm ./data/lm/G_3_gram.arpa
+  fi
+
+  if [ ! -f ./data/lm/G_4_gram.arpa ]; then
+    ./shared/make_kn_lm.py \
+        -ngram-order 4 \
+        -text ./data/fbank/text \
+        -lm ./data/lm/G_4_gram.arpa
+  fi
+
   if [ ! -f data/lm/G_3_gram.fst.txt ]; then
     # It is used in building HLG
     python3 -m kaldilm \
       --read-symbol-table="data/lang_bpe_500/words.txt" \
       --disambig-symbol='#0' \
       --max-order=3 \
-      $dl_dir/lm/3-gram.pruned.1e-7.arpa > data/lm/G_3_gram.fst.txt
+      ./data/lm/G_3_gram.arpa > data/lm/G_3_gram.fst.txt
   fi
 
   if [ ! -f data/lm/G_4_gram.fst.txt ]; then
@@ -281,7 +318,7 @@ if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
       --read-symbol-table="data/lang_bpe_500/words.txt" \
       --disambig-symbol='#0' \
       --max-order=4 \
-      $dl_dir/lm/4-gram.arpa > data/lm/G_4_gram.fst.txt
+      ./data/lm/G_4_gram.arpa > data/lm/G_4_gram.fst.txt
   fi
 fi
 
