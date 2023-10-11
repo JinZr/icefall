@@ -118,10 +118,30 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
     log "Stage 2: Prepare LibriMix manifests"
     # We assume that you have downloaded the LibriSpeech corpus
     # to $dl_dir/LibriSpeech and performed generate_librimix.sh
-    mkdir -p data/manifests
+    manifest_dir=data/manifests
+    mkdir -p ${manifest_dir}
     for n_src in 2; do
-        echo "Preparing manifest for num of speakers: ${n_src}"
+      for set in train-100 train-360 dev test; do
+        echo "Preparing manifest for num of speakers: ${n_src}, ${set}"
+        
+        lhotse prepare librimix \
+            --sampling-rate 16000 \
+            --with-precomputed-mixtures \
+            ${dl_dir}/Libri${n_src}Mix/wav16k/max/metadata/mixture_${set}_mix_both.csv \
+            ${manifest_dir}
 
+        mv ${manifest_dir}/librimix_recordings_mix.jsonl.gz \
+            ${manifest_dir}/librimix_${n_src}mix_${set}_recordings_mix_both.jsonl.gz
+        mv ${manifest_dir}/librimix_recordings_noise.jsonl.gz \
+            ${manifest_dir}/librimix_${n_src}mix_${set}_recordings_noise_both.jsonl.gz
+        mv ${manifest_dir}/librimix_recordings_sources.jsonl.gz \
+            ${manifest_dir}/librimix_${n_src}mix_${set}_recordings_sources_both.jsonl.gz
+
+        mv ${manifest_dir}/librimix_supervisions_mix.jsonl.gz \
+            ${manifest_dir}/librimix_${n_src}mix_${set}_supervisions_mix_both.jsonl.gz
+        mv ${manifest_dir}/librimix_supervisions_sources.jsonl.gz \
+            ${manifest_dir}/librimix_${n_src}mix_${set}_supervisions_sources_both.jsonl.gz
+      done
     done
 fi
 
