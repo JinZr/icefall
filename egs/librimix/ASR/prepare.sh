@@ -119,7 +119,7 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
     # We assume that you have downloaded the LibriSpeech corpus
     # to $dl_dir/LibriSpeech and performed generate_librimix.sh
     mkdir -p data/manifests
-    for n_src in 2 3; do
+    for n_src in 2; do
         echo "Preparing manifest for num of speakers: ${n_src}"
 
     done
