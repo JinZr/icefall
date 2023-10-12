@@ -73,10 +73,6 @@ def compute_fbank_ljspeech():
 
     extractor = TorchaudioSpectrogram(
         TorchaudioSpectrogramConfig(
-            sample_rate=22050,
-            n_fft=1024,
-            win_length=1024,
-            hop_length=256,
             window_type="hanning",
         )
     )
