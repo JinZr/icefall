@@ -1,0 +1,1 @@
+lhotse prepare ljspeech ./download/LJspeech ./data/manifests/
