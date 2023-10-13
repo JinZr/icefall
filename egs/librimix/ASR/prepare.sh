@@ -95,6 +95,8 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
         patch scripts/create_librimix_from_metadata.py \
             -i ../local/create_librimix_from_metadata.patch
         touch .patch.complete
+    else
+        log "already patched the script, skipping"
     fi
 
     python scripts/augment_train_noise.py --wham_dir ../download/wham_noise
