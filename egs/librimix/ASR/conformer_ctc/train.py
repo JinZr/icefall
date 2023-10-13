@@ -130,9 +130,9 @@ def get_parser():
     parser.add_argument(
         "--att-rate",
         type=float,
-        default=0.8,
+        default=0.1,
         help="""The attention rate.
-        The total loss is (1 -  att_rate) * ctc_loss + att_rate * att_loss
+        The total loss is 0 * ctc_loss + att_rate * att_loss
         """,
     )
 
@@ -428,7 +428,7 @@ def compute_loss(
                 sos_id=graph_compiler.sos_id,
                 eos_id=graph_compiler.eos_id,
             )
-        loss = (1.0 - params.att_rate) * ctc_loss + params.att_rate * att_loss
+        loss = 0 * ctc_loss + params.att_rate * att_loss
     else:
         loss = ctc_loss
         att_loss = torch.tensor([0])
