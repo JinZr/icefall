@@ -97,6 +97,7 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
         touch .patch.complete
     fi
 
+    python scripts/augment_train_noise.py --wham_dir ../download/wham_noise
     # bash generate_librimix.sh $dl_dir
         # simulate 2mix data with a random overlap offset about 1-1.5s
     # only support 2mix data currently
@@ -104,10 +105,10 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
     do
         metadata_dir=metadata/Libri${n_src}"Mix"_offset
         python scripts/create_librimix_from_metadata.py \
-            --librispeech_dir ${dl_dir}/LibriSpeech \
-            --wham_dir ${dl_dir}/wham_noise \
+            --librispeech_dir ../${dl_dir}/LibriSpeech \
+            --wham_dir ../${dl_dir}/wham_noise \
             --metadata_dir ${metadata_dir} \
-            --librimix_outdir ${dl_dir} \
+            --librimix_outdir ../${dl_dir} \
             --n_src ${n_src} \
             --freqs "16k" \
             --modes "max" \
