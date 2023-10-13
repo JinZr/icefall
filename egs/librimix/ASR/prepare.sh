@@ -91,8 +91,11 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
     if [ ! -d metadata/Libri2Mix_offset ]; then
         ln -s ${offset_dir} metadata/Libri2Mix_offset
     fi
-    patch scripts/create_librimix_from_metadata.py \
-      -i ../local/create_librimix_from_metadata.patch
+    if [ ! -f .patch.complete ]; then
+        patch scripts/create_librimix_from_metadata.py \
+            -i ../local/create_librimix_from_metadata.patch
+        touch .patch.complete
+    fi
 
     # bash generate_librimix.sh $dl_dir
         # simulate 2mix data with a random overlap offset about 1-1.5s
