@@ -77,6 +77,7 @@ def compute_fbank_librimix(n_src: int, part: str, supervision_part: str):
         cut_set = CutSet.from_cuts(cuts)
         if part not in ["dev", "test"]:
             cut_set = cut_set + cut_set.perturb_speed(0.9) + cut_set.perturb_speed(1.1)
+        logging.info(f"Extracting features: librimix_{n_src}mix_feats_{part}")
         cut_set = cut_set.compute_and_store_features(
             extractor=extractor,
             storage_path=f"{output_dir}/librimix_{n_src}mix_feats_{part}",
