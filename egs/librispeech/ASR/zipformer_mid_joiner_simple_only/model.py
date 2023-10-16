@@ -296,6 +296,7 @@ class AsrModel(nn.Module):
         self,
         mid_encoder_out: torch.Tensor,
         encoder_out_lens: torch.Tensor,
+        decoder_out: torch.Tensor,
         y: k2.RaggedTensor,
         y_lens: torch.Tensor,
         prune_range: int = 5,
@@ -321,15 +322,8 @@ class AsrModel(nn.Module):
             The scale to smooth the loss with lm (output of predictor network)
             part
         """
-        # Now for the decoder, i.e., the prediction network
         blank_id = self.decoder.blank_id
-        sos_y = add_sos(y, sos_id=blank_id)
-
-        # sos_y_padded: [B, S + 1], start with SOS.
-        sos_y_padded = sos_y.pad(mode="constant", padding_value=blank_id)
-
-        # decoder_out: [B, S + 1, decoder_dim]
-        decoder_out = self.mid_decoder(sos_y_padded)
+        decoder_out = decoder_out.detach()
 
         # Note: y does not start with SOS
         # y_padded : [B, S]
@@ -436,6 +430,7 @@ class AsrModel(nn.Module):
             mid_simple_loss, _ = self.forward_mid_transducer(
                 mid_encoder_out=mid_encoder_out,
                 encoder_out_lens=encoder_out_lens,
+                decoder_out=decoder_out,
                 y=y.to(x.device),
                 y_lens=y_lens,
                 prune_range=prune_range,
