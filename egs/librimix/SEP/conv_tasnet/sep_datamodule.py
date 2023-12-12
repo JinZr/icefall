@@ -87,13 +87,6 @@ class LibriMixSpeechSeparationDataModule:
             default=4.0,
         )
         group.add_argument(
-            "--max-duration",
-            type=int,
-            default=200.0,
-            help="Maximum pooled recordings duration (seconds) in a "
-            "single batch. You can reduce it if it causes CUDA OOM.",
-        )
-        group.add_argument(
             "--bucketing-sampler",
             type=str2bool,
             default=True,
