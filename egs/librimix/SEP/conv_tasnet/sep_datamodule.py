@@ -211,6 +211,59 @@ class LibriMixSpeechSeparationDataModule:
 
         return train_dl
 
+    def valid_dataloaders(
+        self,
+        source_cuts: CutSet,
+        mixture_cuts: CutSet,
+    ) -> DataLoader:
+        logging.info("About to create dev dataset")
+
+        validate = LibriMixSpeechSeparationDataset(
+            sources_set=source_cuts,
+            mixtures_set=mixture_cuts,
+            chunk_duration=self.args.chunk_duration,
+        )
+        valid_sampler = DynamicBucketingSampler(
+            mixture_cuts,
+            max_duration=self.args.max_duration,
+            shuffle=False,
+        )
+        logging.info("About to create dev dataloader")
+        valid_dl = DataLoader(
+            validate,
+            sampler=valid_sampler,
+            batch_size=None,
+            num_workers=2,
+            persistent_workers=False,
+        )
+
+        return valid_dl
+
+    def test_dataloaders(
+        self,
+        source_cuts: CutSet,
+        mixture_cuts: CutSet,
+    ) -> DataLoader:
+        logging.debug("About to create test dataset")
+        test = LibriMixSpeechSeparationDataset(
+            sources_set=source_cuts,
+            mixtures_set=mixture_cuts,
+            chunk_duration=self.args.chunk_duration,
+        )
+        sampler = DynamicBucketingSampler(
+            mixture_cuts,
+            max_duration=self.args.max_duration,
+            shuffle=False,
+        )
+        logging.debug("About to create test dataloader")
+        test_dl = DataLoader(
+            test,
+            batch_size=None,
+            sampler=sampler,
+            num_workers=self.args.num_workers,
+        )
+        return test_dl
+
     @lru_cache()
     def train_100_source_cuts(self) -> CutSet:
         logging.info("About to get train-100 source cuts")
