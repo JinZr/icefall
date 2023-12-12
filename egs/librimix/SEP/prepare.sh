@@ -112,8 +112,8 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
             --metadata_dir ${metadata_dir} \
             --librimix_outdir ${dl_dir} \
             --n_src ${n_src} \
-            --freqs "16k" \
-            --modes "max" \
+            --freqs "8k" \
+            --modes "min" \
             --types mix_clean mix_both mix_single
      done
 
