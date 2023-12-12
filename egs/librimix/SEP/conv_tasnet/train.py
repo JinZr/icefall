@@ -487,7 +487,12 @@ def run(rank, world_size, args):
 
     librimix = LibriMixSpeechSeparationDataModule(args)
     train_100_mixture_cuts = librimix.train_100_mixture_cuts()
-    train_dl = librimix.train_dataloaders()
+    train_100_source_cuts = librimix.train_100_source_cuts()
+    train_dl = librimix.train_dataloaders(
+        mixture_cuts=train_100_mixture_cuts,
+        source_cuts=train_100_source_cuts,
+        sampler_state_dict=checkpoints["sampler_state_dict"] if checkpoints else None,
+    )
 
     # There are only 60 waves: 30 files are used for training
     # and the remaining 30 files are used for testing.
