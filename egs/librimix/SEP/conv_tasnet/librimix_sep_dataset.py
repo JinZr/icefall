@@ -46,9 +46,12 @@ class LibriMixSpeechSeparationDataset(PreMixedSourceSeparationDataset):
         mixtures_set: CutSet,
         chunk_duration: float = 2.0,
     ):
-        super().__init__()
-        self.sources_set = sources_set
-        self.mixtures_set = mixtures_set
+        super().__init__(
+            sources_set=sources_set,
+            mixtures_set=mixtures_set,
+        )
+        # self.sources_set = sources_set
+        # self.mixtures_set = mixtures_set
 
         self.chunk_duration = chunk_duration
 
@@ -78,6 +81,3 @@ class LibriMixSpeechSeparationDataset(PreMixedSourceSeparationDataset):
             "spk1": sources[1],
             "mixture": mixture[0],
         }
-
-    def __len__(self):
-        return len(self.cut_ids)
