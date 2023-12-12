@@ -56,10 +56,10 @@ class LibriMixSpeechSeparationDataset(PreMixedSourceSeparationDataset):
         self.chunk_duration = chunk_duration
 
         self.sources_set_chunks = self.sources_set.cut_into_windows(
-            window_duration=chunk_duration
+            duration=chunk_duration
         )
         self.mixtures_set_chunks = self.mixtures_set.cut_into_windows(
-            window_duration=chunk_duration
+            duration=chunk_duration
         )
         self.cut_ids = list(self.mixtures_set_chunks.ids)
         logging.info(f"Created a dataset with {len(self)} cuts.")
