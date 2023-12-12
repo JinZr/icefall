@@ -130,6 +130,12 @@ class LibriMixSpeechSeparationDataModule:
             "shuffled for each epoch.",
         )
         group.add_argument(
+            "--drop-last",
+            type=str2bool,
+            default=True,
+            help="Whether to drop last batch. Used by sampler.",
+        )
+        group.add_argument(
             "--return-cuts",
             type=str2bool,
             default=True,
