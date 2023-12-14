@@ -493,10 +493,10 @@ def run(rank, world_size, args):
         sampler_state_dict=checkpoints["sampler_state_dict"] if checkpoints else None,
     )
 
-    # There are only 60 waves: 30 files are used for training
-    # and the remaining 30 files are used for testing.
-    # We use test data as validation.
-    valid_dl = librimix.test_dataloaders()
+    valid_dl = librimix.valid_dataloaders(
+        mixture_cuts=librimix.dev_mixture_cuts(),
+        source_cuts=librimix.dev_source_cuts(),
+    )
 
     for epoch in range(params.start_epoch, params.num_epochs):
         fix_random_seed(params.seed + epoch)
