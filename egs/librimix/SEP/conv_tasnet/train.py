@@ -258,7 +258,7 @@ def compute_loss(
     is_training: bool,
 ) -> Tuple[Tensor, MetricsTracker]:
     """
-    Compute CTC loss given the model and its inputs.
+    Compute SISNR loss given the model and its inputs.
 
     Args:
       params:
@@ -285,7 +285,7 @@ def compute_loss(
 
     with torch.set_grad_enabled(is_training):
         nnet_output = model(mixture)
-        # nnet_output is (N, T)
+        # nnet_output is (N, T, num_spks)
 
     sources = [batch[f"spk{i}"] for i in range(params.num_spks)]
 
@@ -300,7 +300,6 @@ def compute_loss(
     assert loss.requires_grad == is_training
 
     info = MetricsTracker()
-    info["frames"] = nnet_output.size(-1).sum().item()
     info["loss"] = loss.detach().cpu().item()
 
     return loss, info
@@ -333,7 +332,7 @@ def compute_validation_loss(
     if world_size > 1:
         tot_loss.reduce(loss.device)
 
-    loss_value = tot_loss["loss"] / tot_loss["frames"]
+    loss_value = tot_loss["loss"]
 
     if loss_value < params.best_valid_loss:
         params.best_valid_epoch = params.cur_epoch
@@ -426,7 +425,7 @@ def train_one_epoch(
                     params.batch_idx_train,
                 )
 
-    loss_value = tot_loss["loss"] / tot_loss["frames"]
+    loss_value = tot_loss["loss"]
     params.train_loss = loss_value
 
     if params.train_loss < params.best_train_loss:
