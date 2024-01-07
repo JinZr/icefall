@@ -65,6 +65,7 @@ from lhotse.utils import fix_random_seed
 from model import AsrModel
 from optim import Eden, OffsetAdam, ScaledAdam
 from scaling import ScheduledFloat
+from subsampling import Conv2dSubsampling
 from torch import Tensor
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -547,6 +548,23 @@ def _to_int_tuple(s: str):
     return tuple(map(int, s.split(",")))
 
 
+def get_encoder_embed(params: AttributeDict) -> nn.Module:
+    # encoder_embed converts the input of shape (N, T, num_features)
+    # to the shape (N, (T - 7) // 2, encoder_dims).
+    # That is, it does two things simultaneously:
+    #   (1) subsampling: T -> (T - 7) // 2
+    #   (2) embedding: num_features -> encoder_dims
+    # In the normal configuration, we will downsample once more at the end
+    # by a factor of 2, and most of the encoder stacks will run at a lower
+    # sampling rate.
+    encoder_embed = Conv2dSubsampling(
+        in_channels=params.feature_dim,
+        out_channels=_to_int_tuple(params.encoder_dim)[0],
+        dropout=ScheduledFloat((0.0, 0.3), (20000.0, 0.1)),
+    )
+    return encoder_embed
+
+
 def get_encoder_model(params: AttributeDict) -> nn.Module:
     # TODO: We can add an option to switch between Zipformer and Transformer
 
@@ -593,11 +611,13 @@ def get_joiner_model(params: AttributeDict) -> nn.Module:
 
 
 def get_transducer_model(params: AttributeDict) -> nn.Module:
+    encoder_embed = get_encoder_embed(params)
     encoder = get_encoder_model(params)
     decoder = get_decoder_model(params)
     joiner = get_joiner_model(params)
 
     model = AsrModel(
+        encoder_embed=encoder_embed,
         encoder=encoder,
         decoder=decoder,
         joiner=joiner,
