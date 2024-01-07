@@ -85,9 +85,9 @@ from icefall.hooks import register_inf_check_hooks
 from icefall.utils import (
     AttributeDict,
     MetricsTracker,
-    filter_uneven_sized_batch,
     setup_logger,
     str2bool,
+    tokenize_by_CJK_char,
 )
 
 LRSchedulerType = Union[torch.optim.lr_scheduler._LRScheduler, optim.LRScheduler]
