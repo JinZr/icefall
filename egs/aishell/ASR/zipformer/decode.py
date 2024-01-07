@@ -86,6 +86,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import k2
+import sentencepiece as spm
 import torch
 import torch.nn as nn
 from asr_datamodule import AishellAsrDataModule
@@ -102,7 +103,7 @@ from beam_search import (
 from lhotse.cut import Cut
 from train import add_model_arguments, get_model, get_params
 
-from icefall.char_graph_compiler import CharCtcTrainingGraphCompiler
+from icefall import byte_encode, diagnostics, smart_byte_decode
 from icefall.checkpoint import (
     average_checkpoints,
     average_checkpoints_with_averaged_model,
@@ -116,6 +117,7 @@ from icefall.utils import (
     setup_logger,
     store_transcripts,
     str2bool,
+    tokenize_by_CJK_char,
     write_error_stats,
 )
 
@@ -173,12 +175,12 @@ def get_parser():
         help="The experiment dir",
     )
 
-    # parser.add_argument(
-    #     "--lang-dir",
-    #     type=Path,
-    #     default="data/lang_char",
-    #     help="The lang dir containing word table and LG graph",
-    # )
+    parser.add_argument(
+        "--bpe-model",
+        type=Path,
+        default="data/lang_bbpe_500/bbpe.model",
+        help="The lang dir containing word table and LG graph",
+    )
 
     parser.add_argument(
         "--decoding-method",
@@ -306,9 +308,9 @@ def get_parser():
 def decode_one_batch(
     params: AttributeDict,
     model: nn.Module,
-    lexicon: Lexicon,
-    graph_compiler: CharCtcTrainingGraphCompiler,
+    sp: spm.SentencePieceProcessor,
     batch: dict,
+    word_table: Optional[k2.SymbolTable] = None,
     decoding_graph: Optional[k2.Fsa] = None,
 ) -> Dict[str, List[List[str]]]:
     """Decode one batch and return the result in a dict. The dict has the
@@ -377,10 +379,9 @@ def decode_one_batch(
             beam=params.beam,
             max_contexts=params.max_contexts,
             max_states=params.max_states,
-            blank_penalty=params.blank_penalty,
         )
-        for i in range(encoder_out.size(0)):
-            hyps.append([lexicon.token_table[idx] for idx in hyp_tokens[i]])
+        for hyp in sp.decode(hyp_tokens):
+            hyps.append(smart_byte_decode(hyp).split())
     elif params.decoding_method == "fast_beam_search_LG":
         hyp_tokens = fast_beam_search_one_best(
             model=model,
@@ -390,13 +391,29 @@ def decode_one_batch(
             beam=params.beam,
             max_contexts=params.max_contexts,
             max_states=params.max_states,
-            blank_penalty=params.blank_penalty,
             ilme_scale=params.ilme_scale,
         )
         for hyp in hyp_tokens:
-            sentence = "".join([lexicon.word_table[i] for i in hyp])
-            hyps.append(list(sentence))
+            hyps.append([word_table[i] for i in hyp])
+    elif params.decoding_method == "fast_beam_search_nbest":
+        hyp_tokens = fast_beam_search_nbest(
+            model=model,
+            decoding_graph=decoding_graph,
+            encoder_out=encoder_out,
+            encoder_out_lens=encoder_out_lens,
+            beam=params.beam,
+            max_contexts=params.max_contexts,
+            max_states=params.max_states,
+            num_paths=params.num_paths,
+            nbest_scale=params.nbest_scale,
+        )
+        for hyp in sp.decode(hyp_tokens):
+            hyps.append(smart_byte_decode(hyp).split())
     elif params.decoding_method == "fast_beam_search_nbest_oracle":
+        ref_texts = []
+        for tx in supervisions["text"]:
+            ref_texts.append(byte_encode(tokenize_by_CJK_char(tx)))
+
         hyp_tokens = fast_beam_search_nbest_oracle(
             model=model,
             decoding_graph=decoding_graph,
@@ -406,84 +423,78 @@ def decode_one_batch(
             max_contexts=params.max_contexts,
             max_states=params.max_states,
             num_paths=params.num_paths,
-            ref_texts=graph_compiler.texts_to_ids(supervisions["text"]),
+            ref_texts=sp.encode(ref_texts),
             nbest_scale=params.nbest_scale,
-            blank_penalty=params.blank_penalty,
         )
-        for i in range(encoder_out.size(0)):
-            hyps.append([lexicon.token_table[idx] for idx in hyp_tokens[i]])
+        for hyp in sp.decode(hyp_tokens):
+            hyps.append(smart_byte_decode(hyp).split())
     elif params.decoding_method == "greedy_search" and params.max_sym_per_frame == 1:
         hyp_tokens = greedy_search_batch(
             model=model,
             encoder_out=encoder_out,
             encoder_out_lens=encoder_out_lens,
-            blank_penalty=params.blank_penalty,
         )
-        for i in range(encoder_out.size(0)):
-            hyps.append([lexicon.token_table[idx] for idx in hyp_tokens[i]])
+        for hyp in sp.decode(hyp_tokens):
+            hyps.append(smart_byte_decode(hyp).split())
     elif params.decoding_method == "modified_beam_search":
         hyp_tokens = modified_beam_search(
             model=model,
             encoder_out=encoder_out,
             encoder_out_lens=encoder_out_lens,
-            blank_penalty=params.blank_penalty,
             beam=params.beam_size,
         )
-        for i in range(encoder_out.size(0)):
-            hyps.append([lexicon.token_table[idx] for idx in hyp_tokens[i]])
+        for hyp in sp.decode(hyp_tokens):
+            hyps.append(smart_byte_decode(hyp).split())
     else:
         batch_size = encoder_out.size(0)
 
         for i in range(batch_size):
             # fmt: off
-            encoder_out_i = encoder_out[i:i + 1, :encoder_out_lens[i]]
+            encoder_out_i = encoder_out[i:i+1, :encoder_out_lens[i]]
             # fmt: on
             if params.decoding_method == "greedy_search":
                 hyp = greedy_search(
                     model=model,
                     encoder_out=encoder_out_i,
                     max_sym_per_frame=params.max_sym_per_frame,
-                    blank_penalty=params.blank_penalty,
                 )
             elif params.decoding_method == "beam_search":
                 hyp = beam_search(
                     model=model,
                     encoder_out=encoder_out_i,
                     beam=params.beam_size,
-                    blank_penalty=params.blank_penalty,
                 )
             else:
                 raise ValueError(
                     f"Unsupported decoding method: {params.decoding_method}"
                 )
-            hyps.append([lexicon.token_table[idx] for idx in hyp])
+            hyps.append(smart_byte_decode(sp.decode(hyp)).split())
 
-    key = f"blank_penalty_{params.blank_penalty}"
     if params.decoding_method == "greedy_search":
-        return {"greedy_search_" + key: hyps}
+        return {"greedy_search": hyps}
     elif "fast_beam_search" in params.decoding_method:
-        key += f"_beam_{params.beam}_"
+        key = f"beam_{params.beam}_"
         key += f"max_contexts_{params.max_contexts}_"
         key += f"max_states_{params.max_states}"
         if "nbest" in params.decoding_method:
             key += f"_num_paths_{params.num_paths}_"
             key += f"nbest_scale_{params.nbest_scale}"
         if "LG" in params.decoding_method:
-            key += f"_ilme_scale_{params.ilme_scale}"
             key += f"_ngram_lm_scale_{params.ngram_lm_scale}"
+            key += f"_ilme_scale_{params.ilme_scale}"
 
         return {key: hyps}
     else:
-        return {f"beam_size_{params.beam_size}_" + key: hyps}
+        return {f"beam_size_{params.beam_size}": hyps}
 
 
 def decode_dataset(
     dl: torch.utils.data.DataLoader,
     params: AttributeDict,
     model: nn.Module,
-    lexicon: Lexicon,
-    graph_compiler: CharCtcTrainingGraphCompiler,
+    sp: spm.SentencePieceProcessor,
     decoding_graph: Optional[k2.Fsa] = None,
+    word_table: Optional[k2.SymbolTable] = None,
 ) -> Dict[str, List[Tuple[List[str], List[str]]]]:
     """Decode dataset.
 
@@ -526,9 +537,9 @@ def decode_dataset(
         hyps_dict = decode_one_batch(
             params=params,
             model=model,
-            lexicon=lexicon,
-            graph_compiler=graph_compiler,
+            sp=sp,
             decoding_graph=decoding_graph,
+            word_table=word_table,
             batch=batch,
         )
 
@@ -536,7 +547,8 @@ def decode_dataset(
             this_batch = []
             assert len(hyps) == len(texts)
             for cut_id, hyp_words, ref_text in zip(cut_ids, hyps, texts):
-                this_batch.append((cut_id, ref_text, hyp_words))
+                ref_words = ref_text.split()
+                this_batch.append((cut_id, ref_words, hyp_words))
 
             results[name].extend(this_batch)
 
@@ -758,8 +770,9 @@ def main():
     model.eval()
 
     if "fast_beam_search" in params.decoding_method:
-        if "LG" in params.decoding_method:
+        if params.decoding_method == "fast_beam_search_LG":
             lexicon = Lexicon(params.lang_dir)
+            word_table = lexicon.word_table
             lg_filename = params.lang_dir / "LG.pt"
             logging.info(f"Loading {lg_filename}")
             decoding_graph = k2.Fsa.from_dict(
@@ -767,9 +780,11 @@ def main():
             )
             decoding_graph.scores *= params.ngram_lm_scale
         else:
+            word_table = None
             decoding_graph = k2.trivial_graph(params.vocab_size - 1, device=device)
     else:
         decoding_graph = None
+        word_table = None
 
     num_param = sum([p.numel() for p in model.parameters()])
     logging.info(f"Number of model parameters: {num_param}")
@@ -802,9 +817,9 @@ def main():
             dl=test_dl,
             params=params,
             model=model,
-            lexicon=lexicon,
-            graph_compiler=graph_compiler,
+            sp=sp,
             decoding_graph=decoding_graph,
+            word_table=word_table,
         )
 
         save_results(
