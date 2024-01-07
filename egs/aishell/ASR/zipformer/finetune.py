@@ -125,6 +125,13 @@ def add_finetune_arguments(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--use-offset-adam",
+        type=str2bool,
+        default=False,
+        help="Whether to use OffsetAdam.",
+    )
+
+    parser.add_argument(
         "--finetune-ckpt",
         type=str,
         default=None,
@@ -323,7 +330,7 @@ def get_parser():
     parser.add_argument(
         "--exp-dir",
         type=str,
-        default="pruned_transducer_stateless7/exp",
+        default="zipformer/finetune-exp",
         help="""The experiment dir.
         It specifies the directory where all training related
         files, e.g., checkpoints, log, etc, are saved
@@ -333,7 +340,7 @@ def get_parser():
     parser.add_argument(
         "--bpe-model",
         type=str,
-        default="data/lang_bpe_500/bpe.model",
+        default="data/lang_bbpe_500/bbpe.model",
         help="""Path to the BPE model.
         This should be the bpe model of the original model
         """,
@@ -1178,18 +1185,22 @@ def run(rank, world_size, args):
     parameters_names.append(
         [name_param_pair[0] for name_param_pair in model.named_parameters()]
     )
-    # optimizer = ScaledAdam(
-    #     model.parameters(),
-    #     lr=params.base_lr,
-    #     clipping_scale=2.0,
-    #     parameters_names=parameters_names,
-    # )
-    logging.warning("Using OffsetAdam")
-    optimizer = OffsetAdam(
-        model.parameters(),
-        lr=params.base_lr * 2,
-        clipping_scale=2.0,
-    )
+
+    if params.use_offset_adam:
+        logging.warning("Using OffsetAdam")
+        optimizer = OffsetAdam(
+            model.parameters(),
+            lr=params.base_lr * 2,
+            clipping_scale=2.0,
+        )
+    else:
+        logging.warning("Using ScaledAdam")
+        optimizer = ScaledAdam(
+            model.parameters(),
+            lr=params.base_lr,
+            clipping_scale=2.0,
+            parameters_names=parameters_names,
+        )
 
     scheduler = Eden(
         optimizer=optimizer,
