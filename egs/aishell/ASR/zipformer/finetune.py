@@ -112,7 +112,7 @@ def add_finetune_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--init-modules",
         type=str,
-        default="encoder",
+        default="encoder_embed,encoder",
         help="""
         Modules to be initialized. It matches all parameters starting with
         a specific key. The keys are given with Comma seperated. If None,
