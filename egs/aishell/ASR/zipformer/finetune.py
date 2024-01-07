@@ -1199,7 +1199,6 @@ def run(rank, world_size, args):
             model.parameters(),
             lr=params.base_lr,
             clipping_scale=2.0,
-            parameters_names=parameters_names,
         )
 
     scheduler = Eden(
