@@ -602,7 +602,11 @@ def get_decoder_model(params: AttributeDict) -> nn.Module:
 
 def get_joiner_model(params: AttributeDict) -> nn.Module:
     joiner = Joiner(
+<<<<<<< HEAD
         encoder_dim=int(params.encoder_dim.split(",")[-1]),
+=======
+        encoder_dim=max(_to_int_tuple(params.encoder_dim)),
+>>>>>>> 901af7fe63218fff64726018912780046bf25607
         decoder_dim=params.decoder_dim,
         joiner_dim=params.joiner_dim,
         vocab_size=params.vocab_size,
@@ -1188,6 +1192,7 @@ def run(rank, world_size, args):
     #     clipping_scale=2.0,
     #     parameters_names=parameters_names,
     # )
+    logging.warning("Using OffsetAdam")
     optimizer = OffsetAdam(
         model.parameters(),
         lr=params.base_lr * 2,
