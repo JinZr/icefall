@@ -112,7 +112,7 @@ def add_finetune_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--init-modules",
         type=str,
-        default=None,
+        default="encoder",
         help="""
         Modules to be initialized. It matches all parameters starting with
         a specific key. The keys are given with Comma seperated. If None,
@@ -584,7 +584,7 @@ def get_decoder_model(params: AttributeDict) -> nn.Module:
 
 def get_joiner_model(params: AttributeDict) -> nn.Module:
     joiner = Joiner(
-        encoder_dim=int(params.encoder_dims.split(",")[-1]),
+        encoder_dim=int(params.encoder_dim.split(",")[-1]),
         decoder_dim=params.decoder_dim,
         joiner_dim=params.joiner_dim,
         vocab_size=params.vocab_size,
