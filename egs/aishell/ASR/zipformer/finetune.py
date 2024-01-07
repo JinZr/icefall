@@ -799,7 +799,7 @@ def compute_loss(
     is_training: bool,
 ) -> Tuple[Tensor, MetricsTracker]:
     """
-    Compute transducer loss given the model and its inputs.
+    Compute loss given the model and its inputs.
 
     Args:
       params:
@@ -816,18 +816,6 @@ def compute_loss(
      warmup: a floating point value which increases throughout training;
         values >= 1.0 are fully warmed up and have all modules present.
     """
-    # For the uneven-sized batch, the total duration after padding would possibly
-    # cause OOM. Hence, for each batch, which is sorted descendingly by length,
-    # we simply drop the last few shortest samples, so that the retained total frames
-    # (after padding) would not exceed `allowed_max_frames`:
-    # `allowed_max_frames = int(max_frames * (1.0 + allowed_excess_duration_ratio))`,
-    # where `max_frames = max_duration * 1000 // frame_shift_ms`.
-    # We set allowed_excess_duration_ratio=0.1.
-    max_frames = params.max_duration * 1000 // params.frame_shift_ms
-    allowed_max_frames = int(max_frames * (1.0 + params.allowed_excess_duration_ratio))
-    if is_training:
-        batch = filter_uneven_sized_batch(batch, allowed_max_frames)
-
     device = model.device if isinstance(model, DDP) else next(model.parameters()).device
     feature = batch["inputs"]
     # at entry, feature is (N, T, C)
@@ -842,10 +830,10 @@ def compute_loss(
 
     texts = batch["supervisions"]["text"]
     y = sp.encode(texts, out_type=int)
-    y = k2.RaggedTensor(y).to(device)
+    y = k2.RaggedTensor(y)
 
     with torch.set_grad_enabled(is_training):
-        simple_loss, pruned_loss = model(
+        simple_loss, pruned_loss, ctc_loss = model(
             x=feature,
             x_lens=feature_lens,
             y=y,
@@ -854,21 +842,26 @@ def compute_loss(
             lm_scale=params.lm_scale,
         )
 
-        s = params.simple_loss_scale
-        # take down the scale on the simple loss from 1.0 at the start
-        # to params.simple_loss scale by warm_step.
-        simple_loss_scale = (
-            s
-            if batch_idx_train >= warm_step
-            else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
-        )
-        pruned_loss_scale = (
-            1.0
-            if batch_idx_train >= warm_step
-            else 0.1 + 0.9 * (batch_idx_train / warm_step)
-        )
+        loss = 0.0
 
-        loss = simple_loss_scale * simple_loss + pruned_loss_scale * pruned_loss
+        if params.use_transducer:
+            s = params.simple_loss_scale
+            # take down the scale on the simple loss from 1.0 at the start
+            # to params.simple_loss scale by warm_step.
+            simple_loss_scale = (
+                s
+                if batch_idx_train >= warm_step
+                else 1.0 - (batch_idx_train / warm_step) * (1.0 - s)
+            )
+            pruned_loss_scale = (
+                1.0
+                if batch_idx_train >= warm_step
+                else 0.1 + 0.9 * (batch_idx_train / warm_step)
+            )
+            loss += simple_loss_scale * simple_loss + pruned_loss_scale * pruned_loss
+
+        if params.use_ctc:
+            loss += params.ctc_loss_scale * ctc_loss
 
     assert loss.requires_grad == is_training
 
@@ -879,8 +872,11 @@ def compute_loss(
 
     # Note: We use reduction=sum while computing the loss.
     info["loss"] = loss.detach().cpu().item()
-    info["simple_loss"] = simple_loss.detach().cpu().item()
-    info["pruned_loss"] = pruned_loss.detach().cpu().item()
+    if params.use_transducer:
+        info["simple_loss"] = simple_loss.detach().cpu().item()
+        info["pruned_loss"] = pruned_loss.detach().cpu().item()
+    if params.use_ctc:
+        info["ctc_loss"] = ctc_loss.detach().cpu().item()
 
     return loss, info
 
