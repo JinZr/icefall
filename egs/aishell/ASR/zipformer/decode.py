@@ -173,12 +173,12 @@ def get_parser():
         help="The experiment dir",
     )
 
-    parser.add_argument(
-        "--lang-dir",
-        type=Path,
-        default="data/lang_char",
-        help="The lang dir containing word table and LG graph",
-    )
+    # parser.add_argument(
+    #     "--lang-dir",
+    #     type=Path,
+    #     default="data/lang_char",
+    #     help="The lang dir containing word table and LG graph",
+    # )
 
     parser.add_argument(
         "--decoding-method",
@@ -657,14 +657,20 @@ def main():
 
     logging.info(f"Device: {device}")
 
-    lexicon = Lexicon(params.lang_dir)
-    params.blank_id = lexicon.token_table["<blk>"]
-    params.vocab_size = max(lexicon.tokens) + 1
+    # lexicon = Lexicon(params.lang_dir)
+    # params.blank_id = lexicon.token_table["<blk>"]
+    # params.vocab_size = max(lexicon.tokens) + 1
 
-    graph_compiler = CharCtcTrainingGraphCompiler(
-        lexicon=lexicon,
-        device=device,
-    )
+    # graph_compiler = CharCtcTrainingGraphCompiler(
+    #     lexicon=lexicon,
+    #     device=device,
+    # )
+    sp = spm.SentencePieceProcessor()
+    sp.load(params.bpe_model)
+
+    # <blk> is defined in local/train_bpe_model.py
+    params.blank_id = sp.piece_to_id("<blk>")
+    params.vocab_size = sp.get_piece_size()
 
     logging.info(params)
 
