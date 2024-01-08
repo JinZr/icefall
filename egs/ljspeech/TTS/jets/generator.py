@@ -153,7 +153,6 @@ class JETSGenerator(torch.nn.Module):
             conformer_rel_pos_type (str): Relative pos encoding type in conformer.
             conformer_pos_enc_layer_type (str): Pos encoding layer type in conformer.
             conformer_self_attn_layer_type (str): Self-attention layer type in conformer
-            zero_triu: Whether to use zero triu in relative self-attention module.
             duration_predictor_layers (int): Number of duration predictor layers.
             duration_predictor_chans (int): Number of duration predictor channels.
             duration_predictor_kernel_size (int): Kernel size of duration predictor.
