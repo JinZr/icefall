@@ -12,10 +12,10 @@ import torch.nn.functional as F
 from alignments import AlignmentModule, average_by_duration, viterbi_decode
 from duration_predictor import DurationPredictor, VariancePredictor
 from embedding import PositionalEncoding, ScaledPositionalEncoding
+from encoder import TransformerEncoder
 from hifigan import HiFiGANGenerator
 from length_regulator import GaussianUpsampling
 from style_encoder import StyleEncoder
-from text_encoder import TransformerEncoder
 from utils import get_random_segments
 
 from icefall.utils import make_pad_mask
