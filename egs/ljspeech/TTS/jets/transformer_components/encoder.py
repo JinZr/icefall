@@ -1,10 +1,11 @@
 import torch
-from attention import BaseMultiHeadedAttention
-from embeddings import PositionalEncoding
-from encoder_layer import EncoderLayer, LayerNorm
-from multi_layer_conv import MultiLayeredConv1d
-from repeat import repeat
 from torch import nn
+
+from .attention import BaseMultiHeadedAttention
+from .embeddings import PositionalEncoding
+from .encoder_layer import EncoderLayer, LayerNorm
+from .multi_layer_conv import MultiLayeredConv1d
+from .repeat import repeat
 
 
 class TransformerEncoder(torch.nn.Module):

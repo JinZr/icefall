@@ -7,8 +7,9 @@
 """Encoder self-attention layer definition."""
 
 import torch
-from layer_norm import LayerNorm
 from torch import nn
+
+from .layer_norm import LayerNorm
 
 
 class EncoderLayer(nn.Module):
