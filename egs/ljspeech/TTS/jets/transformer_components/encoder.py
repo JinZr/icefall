@@ -1,5 +1,6 @@
 import torch
-from embedding import PositionalEncoding
+from attention import BaseMultiHeadedAttention
+from embeddings import PositionalEncoding
 from encoder_layer import EncoderLayer, LayerNorm
 from multi_layer_conv import MultiLayeredConv1d
 from repeat import repeat
@@ -75,14 +76,17 @@ class TransformerEncoder(torch.nn.Module):
             num_blocks,
             lambda lnum: EncoderLayer(
                 attention_dim,
-                self_attn=nn.MultiheadAttention,
-                attention_heads=attention_heads,
-                attention_dropout_rate=attention_dropout_rate,
-                feed_forward=MultiLayeredConv1d,
-                feed_forward_dim=attention_dim,
-                feed_forward_linear_units=linear_units,
-                feed_forward_dropout_rate=dropout_rate,
-                feed_forward_positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+                self_attn=BaseMultiHeadedAttention(
+                    n_head=attention_heads,
+                    n_feat=attention_dim,
+                    dropout_rate=attention_dropout_rate,
+                ),
+                feed_forward=MultiLayeredConv1d(
+                    in_chans=attention_dim,
+                    hidden_chans=linear_units,
+                    kernel_size=positionwise_conv_kernel_size,
+                    dropout_rate=dropout_rate,
+                ),
                 dropout_rate=dropout_rate,
                 normalize_before=normalize_before,
                 concat_after=concat_after,

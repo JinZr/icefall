@@ -5,10 +5,10 @@
 
 
 import torch
-from embedding import PositionalEncoding
-from multi_layer_conv import MultiLayeredConv1d
-from repeat import repeat
 from torch import nn
+from transformer_components.embeddings import PositionalEncoding
+from transformer_components.multi_layer_conv import MultiLayeredConv1d
+from transformer_components.repeat import repeat
 
 
 class LayerNorm(torch.nn.LayerNorm):

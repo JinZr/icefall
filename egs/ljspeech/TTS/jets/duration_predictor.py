@@ -6,8 +6,8 @@
 """Variance predictor related modules."""
 
 import torch
+from transformer_components.layer_norm import LayerNorm
 from typeguard import check_argument_types
-from transformer_encoder import LayerNorm
 
 
 class DurationPredictor(torch.nn.Module):
