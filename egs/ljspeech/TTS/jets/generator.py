@@ -34,7 +34,6 @@ class JETSGenerator(torch.nn.Module):
         eunits: int = 1024,
         dlayers: int = 4,
         dunits: int = 1024,
-        positionwise_layer_type: str = "conv1d",
         positionwise_conv_kernel_size: int = 1,
         use_scaled_pos_enc: bool = True,
         use_batch_norm: bool = True,
@@ -283,7 +282,6 @@ class JETSGenerator(torch.nn.Module):
             pos_enc_class=pos_enc_class,
             normalize_before=encoder_normalize_before,
             concat_after=encoder_concat_after,
-            positionwise_layer_type=positionwise_layer_type,
             positionwise_conv_kernel_size=positionwise_conv_kernel_size,
         )
 
@@ -392,7 +390,6 @@ class JETSGenerator(torch.nn.Module):
             pos_enc_class=pos_enc_class,
             normalize_before=decoder_normalize_before,
             concat_after=decoder_concat_after,
-            positionwise_layer_type=positionwise_layer_type,
             positionwise_conv_kernel_size=positionwise_conv_kernel_size,
         )
 

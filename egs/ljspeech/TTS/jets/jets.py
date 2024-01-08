@@ -62,7 +62,6 @@ class JETS(nn.Module):
             "eunits": 1024,
             "dlayers": 4,
             "dunits": 1024,
-            "positionwise_layer_type": "conv1d",
             "positionwise_conv_kernel_size": 1,
             "use_scaled_pos_enc": True,
             "use_batch_norm": True,
