@@ -19,6 +19,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 import torch.distributed as dist
 import torch.nn as nn
@@ -27,6 +28,45 @@ from torch.cuda.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import Optimizer
 from torch.utils.tensorboard import SummaryWriter
+
+
+# from https://github.com/espnet/espnet/blob/master/espnet2/torch_utils/device_funcs.py
+def force_gatherable(data, device):
+    """Change object to gatherable in torch.nn.DataParallel recursively
+
+    The difference from to_device() is changing to torch.Tensor if float or int
+    value is found.
+
+    The restriction to the returned value in DataParallel:
+        The object must be
+        - torch.cuda.Tensor
+        - 1 or more dimension. 0-dimension-tensor sends warning.
+        or a list, tuple, dict.
+
+    """
+    if isinstance(data, dict):
+        return {k: force_gatherable(v, device) for k, v in data.items()}
+    # DataParallel can't handle NamedTuple well
+    elif isinstance(data, tuple) and type(data) is not tuple:
+        return type(data)(*[force_gatherable(o, device) for o in data])
+    elif isinstance(data, (list, tuple, set)):
+        return type(data)(force_gatherable(v, device) for v in data)
+    elif isinstance(data, np.ndarray):
+        return force_gatherable(torch.from_numpy(data), device)
+    elif isinstance(data, torch.Tensor):
+        if data.dim() == 0:
+            # To 1-dim array
+            data = data[None]
+        return data.to(device)
+    elif isinstance(data, float):
+        return torch.tensor([data], dtype=torch.float, device=device)
+    elif isinstance(data, int):
+        return torch.tensor([data], dtype=torch.long, device=device)
+    elif data is None:
+        return None
+    else:
+        logging.warning(f"{type(data)} may not be gatherable by DataParallel")
+        return data
 
 
 # from https://github.com/espnet/espnet/blob/master/espnet2/gan_tts/utils/get_random_segments.py
