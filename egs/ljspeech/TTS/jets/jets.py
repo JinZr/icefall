@@ -82,7 +82,6 @@ class JETS(nn.Module):
             "conformer_rel_pos_type": "latest",
             "conformer_pos_enc_layer_type": "rel_pos",
             "conformer_self_attn_layer_type": "rel_selfattn",
-            "zero_triu": False,
             "duration_predictor_layers": 2,
             "duration_predictor_chans": 384,
             "duration_predictor_kernel_size": 3,
