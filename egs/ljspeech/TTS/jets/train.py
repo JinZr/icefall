@@ -275,7 +275,7 @@ def get_model(params: AttributeDict) -> nn.Module:
         "frame_shift": params.frame_shift,
     }
     model = JETS(
-        vocab_size=params.vocab_size,
+        idim=params.vocab_size,
         odim=params.feature_dim,
         sampling_rate=params.sampling_rate,
         mel_loss_params=mel_loss_params,
