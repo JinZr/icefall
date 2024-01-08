@@ -51,7 +51,7 @@ class JETS(nn.Module):
     def __init__(
         self,
         # generator related
-        vocab_size: int,
+        idim: int,
         odim: int,
         sampling_rate: int = 22050,
         generator_type: str = "jets_generator",
@@ -208,7 +208,7 @@ class JETS(nn.Module):
         """Initialize JETS module.
 
         Args:
-            vocab_size (int): Input vocabrary size.
+            idim (int): Input vocabrary size.
             odim (int): Acoustic feature dimension. The actual output channels will
                 be 1 since JETS is the end-to-end text-to-wave model but for the
                 compatibility odim is used to indicate the acoustic feature dimension.
@@ -237,7 +237,7 @@ class JETS(nn.Module):
 
         # define modules
         generator_class = AVAILABLE_GENERATERS[generator_type]
-        generator_params.update(vocab_size=vocab_size, odim=odim)
+        generator_params.update(idim=idim, odim=odim)
         self.generator = generator_class(
             **generator_params,
         )
