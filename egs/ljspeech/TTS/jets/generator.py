@@ -153,7 +153,6 @@ class JETSGenerator(torch.nn.Module):
             conformer_rel_pos_type (str): Relative pos encoding type in conformer.
             conformer_pos_enc_layer_type (str): Pos encoding layer type in conformer.
             conformer_self_attn_layer_type (str): Self-attention layer type in conformer
-            conformer_activation_type (str): Activation function type in conformer.
             use_macaron_style_in_conformer: Whether to use macaron style FFN.
             use_cnn_in_conformer: Whether to use CNN in conformer.
             zero_triu: Whether to use zero triu in relative self-attention module.

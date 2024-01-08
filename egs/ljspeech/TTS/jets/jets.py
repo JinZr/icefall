@@ -82,7 +82,6 @@ class JETS(nn.Module):
             "conformer_rel_pos_type": "latest",
             "conformer_pos_enc_layer_type": "rel_pos",
             "conformer_self_attn_layer_type": "rel_selfattn",
-            "conformer_activation_type": "swish",
             "use_macaron_style_in_conformer": True,
             "use_cnn_in_conformer": True,
             "zero_triu": False,
