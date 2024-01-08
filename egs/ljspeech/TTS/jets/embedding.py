@@ -80,7 +80,7 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-class ScaledPositionalEncoding(nn.Module):
+class ScaledPositionalEncoding(PositionalEncoding):
     """Scaled positional encoding module.
 
     See Sec. 3.2  https://arxiv.org/abs/1809.08895
