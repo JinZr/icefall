@@ -19,10 +19,10 @@
 
 
 """
-This file computes fbank features of the VCTK dataset.
+This file computes spectrogram features of the LibriTTS dataset.
 It looks for manifests in the directory data/manifests.
 
-The generated fbank features are saved in data/spectrogram.
+The generated spectrogram features are saved in data/spectrogram.
 """
 
 import argparse
@@ -32,18 +32,10 @@ from pathlib import Path
 from typing import Optional
 
 import torch
-from lhotse import (
-    CutSet,
-    LilcomChunkyWriter,
-    Spectrogram,
-    SpectrogramConfig,
-    load_manifest,
-)
-from lhotse.audio import RecordingSet
+from lhotse import CutSet, LilcomChunkyWriter, Spectrogram, SpectrogramConfig
 from lhotse.recipes.utils import read_manifests_if_cached
-from lhotse.supervision import SupervisionSet
 
-from icefall.utils import get_executor, str2bool
+from icefall.utils import get_executor
 
 # Torch's multithreaded behavior needs to be disabled or
 # it wastes a lot of CPU and slow things down.
@@ -59,7 +51,7 @@ def get_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        help="""Dataset parts to compute fbank. If None, we will use all""",
+        help="""Dataset parts to compute spectrogram. If None, we will use all""",
     )
 
     return parser.parse_args()
@@ -72,7 +64,7 @@ def compute_spectrogram_libritts(
     output_dir = Path("data/spectrogram")
     num_jobs = min(32, os.cpu_count())
 
-    sampling_rate = 22050
+    sampling_rate = 24000
     frame_length = 1024 / sampling_rate  # (in second)
     frame_shift = 256 / sampling_rate  # (in second)
     use_fft_mag = True
