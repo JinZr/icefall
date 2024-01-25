@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-# Copyright      2022  Xiaomi Corp.        (authors: Fangjun Kuang)
+# Copyright 2021-2024 Xiaomi Corporation (Author: Fangjun Kuang,
+#                                                 Zengwei Yao,
+#                                                 Zengrui Jin,)
 #
 # See ../../../../LICENSE for clarification regarding multiple authors
 #
@@ -19,17 +21,18 @@ This script loads torchscript models, exported by `torch.jit.script()`
 and uses them to decode waves.
 You can use the following command to get the exported models:
 
-./tiny_transducer_ctc/export.py \
-  --exp-dir ./tiny_transducer_ctc/exp \
-  --bpe-model data/lang_bpe_500/bpe.model \
-  --epoch 20 \
-  --avg 10 \
+./zipformer/export.py \
+  --exp-dir ./zipformer_bbpe/exp \
+  --bpe ./data/lang_bbpe_500/bbpe.model \
+  --epoch 30 \
+  --avg 9 \
   --jit 1
 
 Usage of this script:
 
-./tiny_transducer_ctc/jit_pretrained.py \
-  --nn-model-filename ./tiny_transducer_ctc/exp/cpu_jit.pt \
+./zipformer/jit_pretrained.py \
+  --nn-model-filename ./zipformer_bbpe/exp/cpu_jit.pt \
+  --bpe ./data/lang_bbpe_500/bbpe.model \
   /path/to/foo.wav \
   /path/to/bar.wav
 """
@@ -44,6 +47,8 @@ import sentencepiece as spm
 import torch
 import torchaudio
 from torch.nn.utils.rnn import pad_sequence
+
+from icefall import smart_byte_decode
 
 
 def get_parser():
@@ -61,7 +66,8 @@ def get_parser():
     parser.add_argument(
         "--bpe-model",
         type=str,
-        help="""Path to bpe.model.""",
+        required=True,
+        help="""Path to the bbpe.model.""",
     )
 
     parser.add_argument(
@@ -94,9 +100,9 @@ def read_sound_files(
         wave, sample_rate = torchaudio.load(f)
         assert (
             sample_rate == expected_sample_rate
-        ), f"Expected sample rate: {expected_sample_rate}. Given: {sample_rate}"
+        ), f"expected sample rate: {expected_sample_rate}. Given: {sample_rate}"
         # We use only the first channel
-        ans.append(wave[0])
+        ans.append(wave[0].contiguous())
     return ans
 
 
@@ -127,7 +133,7 @@ def greedy_search(
     )
 
     device = encoder_out.device
-    blank_id = 0  # hard-code to 0
+    blank_id = model.decoder.blank_id
 
     batch_size_list = packed_encoder_out.batch_sizes.tolist()
     N = encoder_out.size(0)
@@ -247,8 +253,8 @@ def main():
     feature_lengths = torch.tensor(feature_lengths, device=device)
 
     encoder_out, encoder_out_lens = model.encoder(
-        x=features,
-        x_lens=feature_lengths,
+        features=features,
+        feature_lengths=feature_lengths,
     )
 
     hyps = greedy_search(
@@ -256,9 +262,10 @@ def main():
         encoder_out=encoder_out,
         encoder_out_lens=encoder_out_lens,
     )
+
     s = "\n"
     for filename, hyp in zip(args.sound_files, hyps):
-        words = sp.decode(hyp)
+        words = smart_byte_decode(sp.decode(hyp))
         s += f"{filename}:\n{words}\n\n"
     logging.info(s)
 
