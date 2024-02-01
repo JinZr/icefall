@@ -110,8 +110,18 @@ fi
 if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   log "Stage 5: Generate speakers file"
   if [ ! -e data/speakers.txt ]; then
-    gunzip -c data/manifests/libritts_cuts_train-all-shuf.jsonl.gz \
-      | jq '.speaker' | sed 's/"//g' \
+    touch data/speakers.txt
+    
+    for set in train-clean-100 train-clean-360 train-other-500 dev-clean dev-other test-clean test-other; do
+      gunzip -c data/manifests/libritts_supervisions_${set}.jsonl.gz \
+        | jq '.speaker' | sed 's/"//g' \
+        | sort | uniq >> data/${set}_speakers.txt
+    done
+
+    cat data/train-clean-100_speakers.txt \
+      data/train-clean-360_speakers.txt data/train-other-500_speakers.txt \
+      data/dev-clean_speakers.txt data/dev-other_speakers.txt \
+      data/test-clean_speakers.txt data/test-other_speakers.txt \
       | sort | uniq > data/speakers.txt
   fi
 fi
