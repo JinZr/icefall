@@ -115,7 +115,7 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
     for set in train-clean-100 train-clean-360 train-other-500 dev-clean dev-other test-clean test-other; do
       gunzip -c data/manifests/libritts_supervisions_${set}.jsonl.gz \
         | jq '.speaker' | sed 's/"//g' \
-        | sort | uniq >> data/${set}_speakers.txt
+        | sort | uniq > data/${set}_speakers.txt
     done
 
     cat data/train-clean-100_speakers.txt \
