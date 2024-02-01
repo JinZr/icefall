@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Copyright    2023  Xiaomi Corp.        (authors: Zengwei Yao,
-#                                                  Zengrui Jin,)
+# Copyright    2023-2024  Xiaomi Corp.        (authors: Zengwei Yao,
+#                                                       Zengrui Jin,)
 #
 # See ../../../../LICENSE for clarification regarding multiple authors
 #
@@ -30,9 +30,18 @@ from lhotse import load_manifest_lazy
 
 
 def main():
-    path = "./data/spectrogram/vctk_cuts_all.jsonl.gz"
-    cuts = load_manifest_lazy(path)
-    cuts.describe()
+    paths = [
+        "./data/spectrogram/libritts_cuts_train-clean-100.jsonl.gz",
+        "./data/spectrogram/libritts_cuts_train-clean-360.jsonl.gz",
+        "./data/spectrogram/libritts_cuts_train-other-500.jsonl.gz",
+        "./data/spectrogram/libritts_cuts_dev-clean.jsonl.gz",
+        "./data/spectrogram/libritts_cuts_dev-other.jsonl.gz",
+        "./data/spectrogram/libritts_cuts_test-clean.jsonl.gz",
+        "./data/spectrogram/libritts_cuts_test-other.jsonl.gz",
+    ]
+    for path in paths:
+        cuts = load_manifest_lazy(path)
+        cuts.describe()
 
 
 if __name__ == "__main__":
