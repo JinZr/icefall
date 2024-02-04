@@ -91,8 +91,8 @@ def format_lhotse_cuts(
     recording_set = RecordingSet.from_recordings(recordings)
     supervision_set = SupervisionSet.from_segments(supervisions)
 
-    recording_set.to_json(output_dir / f"lmsys_recordings_{subset}.json")
-    supervision_set.to_json(output_dir / f"lmsys_supervisions_{subset}.json")
+    recording_set.to_jsonl(output_dir / f"lmsys_recordings_{subset}.jsonl.gz")
+    supervision_set.to_jsonl(output_dir / f"lmsys_supervisions_{subset}.jsonl.gz")
 
     logging.info(
         f"Saved {len(recordings)} recordings and {len(supervisions)} supervisions to {output_dir}"
