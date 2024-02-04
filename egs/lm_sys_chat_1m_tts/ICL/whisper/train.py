@@ -454,13 +454,16 @@ def compute_loss(
     prev_text_tokens_list = []
     for prev_text in prev_texts:
         prev_text_tokens_list.append(
-            [tokenizer.sot_prev] + tokenizer.encode(prev_text) + [tokenizer.sot_lm]
+            [tokenizer.sot_prev] + tokenizer.encode(prev_text) + [tokenizer.eot]
         )
 
     text_tokens_list = []
     for text in texts:
         text_tokens_list.append(
-            [tokenizer.sot_lm] + tokenizer.encode(text)  # + [tokenizer.eot]
+            list(tokenizer.sot_sequence_including_notimestamps)
+            + [tokenizer.sot_lm]
+            + tokenizer.encode(text)
+            + [tokenizer.eot]
         )
     # convert it to torch tensor
     prev_text_tokens_list = [
