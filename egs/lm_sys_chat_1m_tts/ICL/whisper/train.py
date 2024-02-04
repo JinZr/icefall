@@ -839,8 +839,8 @@ def run(rank, world_size, args):
             return False
         return True
 
-    train_cuts = lmsyschat.train_cuts().filter(lambda c: c.duration < 30.0)
-    valid_cuts = lmsyschat.dev_cuts().filter(lambda c: c.duration < 30.0)
+    train_cuts = lmsyschat.train_cuts().filter(remove_short_and_long_utt)
+    valid_cuts = lmsyschat.dev_cuts().filter(remove_short_and_long_utt)
 
     train_dl = lmsyschat.train_dataloaders(train_cuts)
     valid_dl = lmsyschat.valid_dataloaders(valid_cuts)
