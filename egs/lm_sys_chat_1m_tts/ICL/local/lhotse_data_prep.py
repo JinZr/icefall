@@ -20,7 +20,7 @@ torch.set_num_interop_threads(1)
 def format_lhotse_cuts(
     dataset: datasets.dataset_dict.DatasetDict,
     subset: str = "train",
-    wav_dir: str = "data/wav",
+    wav_dir: str = "download/wav",
     cache_dir: str = "data/cache",
     output_dir: str = "data/manifests",
 ):
@@ -131,7 +131,7 @@ def get_args():
     parser.add_argument(
         "--wav-dir",
         type=str,
-        default="./data/wav",
+        default="./download/wav",
         help="""Directory to saved TTS audio files""",
     )
 
