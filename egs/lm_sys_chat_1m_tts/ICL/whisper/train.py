@@ -456,12 +456,17 @@ def compute_loss(
             [tokenizer.sot_prev] + tokenizer.encode(prev_text) + [tokenizer.sot_lm]
         )
 
-    text_tokens_list = [
-        [tokenizer.sot_lm] + tokenizer.encode(text) + [tokenizer.eot] for text in texts
-    ]
+    text_tokens_list = []
+    for text in texts:
+        text_tokens_list.append(
+            [tokenizer.sot_lm] + tokenizer.encode(text) + [tokenizer.eot]
+        )
     # convert it to torch tensor
     prev_text_tokens_list = [
         torch.LongTensor(text_tokens) for text_tokens in prev_text_tokens_list
+    ]
+    text_tokens_list = [
+        torch.LongTensor(text_tokens) for text_tokens in text_tokens_list
     ]
 
     # 50256 is the index of <pad> for all whisper models
