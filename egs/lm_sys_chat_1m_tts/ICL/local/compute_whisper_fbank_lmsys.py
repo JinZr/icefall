@@ -80,7 +80,7 @@ def compute_whisper_fbank_lmsys(
             cut_set = CutSet.from_manifests(
                 recordings=m["recordings"],
                 supervisions=m["supervisions"],
-            )
+            ).resample(16000)
 
             cut_set = cut_set.compute_and_store_features(
                 extractor=extractor,
