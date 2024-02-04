@@ -330,3 +330,11 @@ class LmsysChatIclDataModule:
             self.args.manifest_dir / "lmsys_cuts_train.jsonl.gz"
         )
         return cuts_train
+
+    @lru_cache()
+    def dev_cuts(self) -> CutSet:
+        logging.info("About to get dev cuts")
+        cuts_train = load_manifest_lazy(
+            self.args.manifest_dir / "lmsys_cuts_dev.jsonl.gz"
+        )
+        return cuts_train

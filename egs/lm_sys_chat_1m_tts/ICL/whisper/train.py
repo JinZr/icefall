@@ -446,7 +446,10 @@ def compute_loss(
     batch_idx_train = params.batch_idx_train
 
     texts = batch["supervisions"]["text"]
-    prev_texts = batch["supervisions"]["custom"]["prev_text"]
+    prev_texts = [
+        cut["supervisions"][0]["custom"]["prev_text"]
+        for cut in batch["supervisions"]["cut"]
+    ]
 
     prev_text_tokens_list = [
         list(tokenizer.sot_prev) + tokenizer.encode(prev_text) + [tokenizer.sot_lm]
@@ -812,11 +815,8 @@ def run(rank, world_size, args):
     else:
         sampler_state_dict = None
 
-    cutset = lmsyschat.train_cuts().filter(lambda c: c.duration < 30.0)
-    # train_cuts = lmsyschat.train_cuts()[500:]
-    # valid_cuts = lmsyschat.train_cuts()[:500]
-    train_cuts = cutset.subset(last=78040)
-    valid_cuts = cutset.subset(first=500)
+    train_cuts = lmsyschat.train_cuts().filter(lambda c: c.duration < 30.0)
+    valid_cuts = lmsyschat.dev_cuts().filter(lambda c: c.duration < 30.0)
 
     train_dl = lmsyschat.train_dataloaders(train_cuts)
     valid_dl = lmsyschat.valid_dataloaders(valid_cuts)
