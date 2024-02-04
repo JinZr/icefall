@@ -828,7 +828,7 @@ def run(rank, world_size, args):
         if c.duration > 30.0:
             return False
 
-        T = c.num_frames
+        T = c.num_features
         tokens = tokenizer.encode(
             c.supervisions[0].custom["prev_text"], disallowed_special=[]
         )
