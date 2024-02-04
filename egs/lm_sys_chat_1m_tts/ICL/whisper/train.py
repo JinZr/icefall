@@ -493,7 +493,7 @@ def compute_loss(
     ignore_prefix_size = 3
     with torch.set_grad_enabled(is_training):
         encoder_out = model.encoder(feature)
-        text_logits = model.decoder(text_tokens_list.to(device), encoder_out)
+        text_logits = model.decoder(target_tokens.to(device), encoder_out)
         text_logits = text_logits[:, ignore_prefix_size:, :]
         target_tokens = target_tokens[:, ignore_prefix_size:]
         loss = decoder_criterion(text_logits, target_tokens.to(device))
