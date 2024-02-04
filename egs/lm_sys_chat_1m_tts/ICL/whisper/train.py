@@ -460,7 +460,7 @@ def compute_loss(
     text_tokens_list = []
     for text in texts:
         text_tokens_list.append(
-            [tokenizer.sot_lm] + tokenizer.encode(text) + [tokenizer.eot]
+            [tokenizer.sot_lm] + tokenizer.encode(text)  # + [tokenizer.eot]
         )
     # convert it to torch tensor
     prev_text_tokens_list = [
@@ -840,6 +840,7 @@ def run(rank, world_size, args):
         return True
 
     train_cuts = lmsyschat.train_cuts().filter(remove_short_and_long_utt)
+    train_cuts.describe(full=True)
     valid_cuts = lmsyschat.dev_cuts().filter(remove_short_and_long_utt)
 
     train_dl = lmsyschat.train_dataloaders(train_cuts)
