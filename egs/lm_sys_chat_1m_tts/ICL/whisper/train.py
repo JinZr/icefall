@@ -826,7 +826,7 @@ def run(rank, world_size, args):
             return False
 
         T = c.num_frames
-        tokens = tokenizer.encode([c.supervisions[0].custom["prev_text"]])
+        tokens = tokenizer.encode(c.supervisions[0].custom["prev_text"])
         if T < len(tokens):
             logging.warning(
                 f"Exclude cut with ID {c.id} from training. "
