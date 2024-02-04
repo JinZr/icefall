@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
     dataset = load_dataset(
         args.dataset,
-        data_dir=args.download_dir,
+        cache_dir=args.download_dir,
     )
 
     format_lhotse_cuts(
