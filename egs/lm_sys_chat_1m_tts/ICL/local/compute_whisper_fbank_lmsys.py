@@ -42,7 +42,7 @@ torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
 
 
-def compute_fbank_aishell(
+def compute_whisper_fbank_lmsys(
     num_mel_bins: int = 128,
     output_dir: str = "data/fbank_whisper",
 ):
@@ -50,7 +50,7 @@ def compute_fbank_aishell(
     output_dir = Path(output_dir)
     num_jobs = min(15, os.cpu_count())
 
-    dataset_parts = "train"
+    dataset_parts = ("train",)
     prefix = "lmsys"
     suffix = "jsonl.gz"
     manifests = read_manifests_if_cached(
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     logging.basicConfig(format=formatter, level=logging.INFO)
 
     args = get_args()
-    compute_fbank_aishell(
+    compute_whisper_fbank_lmsys(
         num_mel_bins=args.num_mel_bins,
         output_dir=args.output_dir,
     )
