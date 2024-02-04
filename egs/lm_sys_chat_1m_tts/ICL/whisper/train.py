@@ -52,8 +52,8 @@ import torch
 import torch.nn as nn
 import whisper
 from deepspeed.utils.zero_to_fp32 import convert_zero_checkpoint_to_fp32_state_dict
+from icl_datamodule import LmsysChatIclDataModule
 from label_smoothing import LabelSmoothingLoss
-from lhotse import CutSet
 from lhotse.dataset.sampling.base import CutSampler
 from lhotse.utils import fix_random_seed
 from optim import Eden
@@ -142,7 +142,7 @@ def get_parser():
     parser.add_argument(
         "--model-name",
         type=str,
-        default="large-v2",
+        default="large-v3",
         choices=["large-v2", "large-v3", "medium", "small", "tiny"],
         help="""The model name to use.
         """,
@@ -446,37 +446,40 @@ def compute_loss(
     batch_idx_train = params.batch_idx_train
 
     texts = batch["supervisions"]["text"]
-    # remove spaces in texts
-    texts = [text.replace(" ", "") for text in texts]
+    prev_texts = batch["supervisions"]["custom"]["prev_text"]
 
+    prev_text_tokens_list = [
+        list(tokenizer.sot_prev) + tokenizer.encode(prev_text) + [tokenizer.sot_lm]
+        for prev_text in prev_texts
+    ]
     text_tokens_list = [
-        list(tokenizer.sot_sequence_including_notimestamps)
-        + tokenizer.encode(text)
-        + [tokenizer.eot]
+        list(tokenizer.sot_lm) + tokenizer.encode(text) + [tokenizer.eot]
         for text in texts
     ]
     # convert it to torch tensor
-    text_tokens_list = [
-        torch.LongTensor(text_tokens) for text_tokens in text_tokens_list
+    prev_text_tokens_list = [
+        torch.LongTensor(text_tokens) for text_tokens in prev_text_tokens_list
     ]
 
     # 50256 is the index of <pad> for all whisper models
     prev_outputs_tokens = _batch_tensors(
-        [tokens[:-1] for tokens in text_tokens_list], pad_value=50256
+        [tokens[:-1] for tokens in prev_text_tokens_list], pad_value=50256
     )
     target_tokens = _batch_tensors(
         [tokens[1:] for tokens in text_tokens_list], pad_value=50256
     )
     target_lengths = torch.LongTensor(
-        [tokens.shape[0] - 1 for tokens in text_tokens_list]
+        [tokens.shape[0] - 1 for tokens in prev_text_tokens_list]
     )
 
     decoder_criterion = LabelSmoothingLoss(
         ignore_index=50256, label_smoothing=0.1, reduction="sum"
     )
 
-    # ignore the first 3 tokens, which are always <|lang_id|>, <|transcibe|>, <|notimestampes|>
-    ignore_prefix_size = 3
+    # ignore the first 3 tokens, which are always
+    # <|lang_id|>, <|transcibe|>, <|notimestampes|>
+    # for the icl task, we do not ignore any tokens
+    ignore_prefix_size = 0
     with torch.set_grad_enabled(is_training):
         encoder_out = model.encoder(feature)
         text_logits = model.decoder(prev_outputs_tokens.to(device), encoder_out)
@@ -739,7 +742,7 @@ def run(rank, world_size, args):
     tokenizer = whisper.tokenizer.get_tokenizer(
         model.is_multilingual,
         num_languages=model.num_languages,
-        language="zh",
+        language="en",
         task="transcribe",
     )
 
@@ -759,6 +762,11 @@ def run(rank, world_size, args):
         device = torch.device("cpu")
     logging.info(f"Device: {device}")
     model.to(device)
+
+    logging.info("Freeze encoder")
+    for name, param in model.named_parameters():
+        if name.startswith("encoder."):
+            param.requires_grad = False
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=params.base_lr)
     scheduler = Eden(optimizer, params.lr_batches, params.lr_epochs)
@@ -795,14 +803,7 @@ def run(rank, world_size, args):
     if params.inf_check:
         register_inf_check_hooks(model)
 
-    dataset = load_dataset("lmsys/lmsys-chat-1m")
-    dataset.filter(
-        lambda x: x["language"] == "English" and not x["redacted"],
-        cache_file_name="lmsys/lmsys-chat-1m/filtered",
-    ).set_format(
-        type="torch",
-        columns=["conversation", "conversation_id"],
-    )
+    lmsyschat = LmsysChatIclDataModule(args=args)
 
     if params.start_batch > 0 and checkpoints and "sampler" in checkpoints:
         # We only load the sampler's state dict when it loads a checkpoint
@@ -811,8 +812,12 @@ def run(rank, world_size, args):
     else:
         sampler_state_dict = None
 
-    train_dl = aishell.train_dataloaders(aishell.train_cuts())
-    valid_dl = aishell.valid_dataloaders(aishell.valid_cuts())
+    # cutset = lmsyschat.train_cuts().filter(lambda c: c.duration < 30.0)
+    train_cuts = lmsyschat.train_cuts()[500:]
+    valid_cuts = lmsyschat.train_cuts()[:500]
+
+    train_dl = lmsyschat.train_dataloaders(train_cuts)
+    valid_dl = lmsyschat.valid_dataloaders(valid_cuts)
 
     scaler = GradScaler(enabled=params.use_fp16, init_scale=1.0)
     if checkpoints and "grad_scaler" in checkpoints:
@@ -913,6 +918,7 @@ def display_and_save_batch(
 
 def main():
     parser = get_parser()
+    LmsysChatIclDataModule.add_arguments(parser)
     args = parser.parse_args()
     args.exp_dir = Path(args.exp_dir)
 

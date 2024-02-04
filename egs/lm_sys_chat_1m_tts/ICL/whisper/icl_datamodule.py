@@ -51,7 +51,6 @@ class LmsysChatIclDataModule:
     - bucketing samplers,
     - cut concatenation,
     - augmentation,
-    - on-the-fly feature extraction
 
     This class should be derived for specific corpora used in ASR tasks.
     """
@@ -62,7 +61,7 @@ class LmsysChatIclDataModule:
     @classmethod
     def add_arguments(cls, parser: argparse.ArgumentParser):
         group = parser.add_argument_group(
-            title="ASR data related options",
+            title="ICL data related options",
             description="These options are used for the preparation of "
             "PyTorch DataLoaders from Lhotse CutSet's -- they control the "
             "effective batch sizes, sampling strategies, applied data "
@@ -71,7 +70,7 @@ class LmsysChatIclDataModule:
         group.add_argument(
             "--manifest-dir",
             type=Path,
-            default=Path("data/fbank"),
+            default=Path("data/fbank_whisper"),
             help="Path to directory with train/valid/test cuts.",
         )
         group.add_argument(
@@ -116,14 +115,6 @@ class LmsysChatIclDataModule:
             help="The amount of padding (in seconds) inserted between "
             "concatenated cuts. This padding is filled with noise when "
             "noise augmentation is used.",
-        )
-        group.add_argument(
-            "--on-the-fly-feats",
-            type=str2bool,
-            default=False,
-            help="When enabled, use on-the-fly cut mixing and feature "
-            "extraction. Will drop existing precomputed feature manifests "
-            "if available.",
         )
         group.add_argument(
             "--shuffle",
@@ -249,24 +240,6 @@ class LmsysChatIclDataModule:
             return_cuts=self.args.return_cuts,
         )
 
-        if self.args.on_the_fly_feats:
-            # NOTE: the PerturbSpeed transform should be added only if we
-            # remove it from data prep stage.
-            # Add on-the-fly speed perturbation; since originally it would
-            # have increased epoch size by 3, we will apply prob 2/3 and use
-            # 3x more epochs.
-            # Speed perturbation probably should come first before
-            # concatenation, but in principle the transforms order doesn't have
-            # to be strict (e.g. could be randomized)
-            # transforms = [PerturbSpeed(factors=[0.9, 1.1], p=2/3)] + transforms   # noqa
-            # Drop feats to be on the safe side.
-            train = K2SpeechRecognitionDataset(
-                cut_transforms=transforms,
-                input_strategy=OnTheFlyFeatures(Fbank(FbankConfig(num_mel_bins=80))),
-                input_transforms=input_transforms,
-                return_cuts=self.args.return_cuts,
-            )
-
         if self.args.bucketing_sampler:
             logging.info("Using DynamicBucketingSampler.")
             train_sampler = DynamicBucketingSampler(
@@ -311,17 +284,10 @@ class LmsysChatIclDataModule:
             ] + transforms
 
         logging.info("About to create dev dataset")
-        if self.args.on_the_fly_feats:
-            validate = K2SpeechRecognitionDataset(
-                cut_transforms=transforms,
-                input_strategy=OnTheFlyFeatures(Fbank(FbankConfig(num_mel_bins=80))),
-                return_cuts=self.args.return_cuts,
-            )
-        else:
-            validate = K2SpeechRecognitionDataset(
-                cut_transforms=transforms,
-                return_cuts=self.args.return_cuts,
-            )
+        validate = K2SpeechRecognitionDataset(
+            cut_transforms=transforms,
+            return_cuts=self.args.return_cuts,
+        )
         valid_sampler = DynamicBucketingSampler(
             cuts_valid,
             max_duration=self.args.max_duration,
@@ -341,11 +307,7 @@ class LmsysChatIclDataModule:
     def test_dataloaders(self, cuts: CutSet) -> DataLoader:
         logging.info("About to create test dataset")
         test = K2SpeechRecognitionDataset(
-            input_strategy=(
-                OnTheFlyFeatures(Fbank(FbankConfig(num_mel_bins=80)))
-                if self.args.on_the_fly_feats
-                else PrecomputedFeatures()
-            ),
+            input_strategy=PrecomputedFeatures(),
             return_cuts=self.args.return_cuts,
         )
         sampler = DynamicBucketingSampler(
@@ -365,16 +327,6 @@ class LmsysChatIclDataModule:
     def train_cuts(self) -> CutSet:
         logging.info("About to get train cuts")
         cuts_train = load_manifest_lazy(
-            self.args.manifest_dir / "aishell_cuts_train.jsonl.gz"
+            self.args.manifest_dir / "lmsys_cuts_train.jsonl.gz"
         )
         return cuts_train
-
-    @lru_cache()
-    def valid_cuts(self) -> CutSet:
-        logging.info("About to get dev cuts")
-        return load_manifest_lazy(self.args.manifest_dir / "aishell_cuts_dev.jsonl.gz")
-
-    @lru_cache()
-    def test_cuts(self) -> List[CutSet]:
-        logging.info("About to get test cuts")
-        return load_manifest_lazy(self.args.manifest_dir / "aishell_cuts_test.jsonl.gz")
