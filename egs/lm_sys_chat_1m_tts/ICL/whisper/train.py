@@ -63,6 +63,7 @@ from torch.cuda.amp import GradScaler
 from torch.nn.functional import pad as pad_tensor
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
+from whisper.normalizers import EnglishTextNormalizer
 from whisper_encoder_forward_monkey_patch import replace_whisper_encoder_forward
 
 from icefall import diagnostics
@@ -831,7 +832,7 @@ def run(rank, world_size, args):
         tokens = tokenizer.encode(
             c.supervisions[0].custom["prev_text"], disallowed_special=[]
         )
-        if T < len(tokens) + 5:
+        if T // 2 < len(tokens):
             # logging.warning(
             #     f"Exclude cut with ID {c.id} from training. "
             #     f"Number of frames (before subsampling): {c.num_frames}. "
