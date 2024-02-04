@@ -447,8 +447,7 @@ def compute_loss(
 
     texts = batch["supervisions"]["text"]
     prev_texts = [
-        cut["supervisions"][0]["custom"]["prev_text"]
-        for cut in batch["supervisions"]["cut"]
+        cut.supervisions[0].custom["prev_text"] for cut in batch["supervisions"]["cut"]
     ]
 
     prev_text_tokens_list = [
