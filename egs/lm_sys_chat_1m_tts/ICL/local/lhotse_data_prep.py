@@ -57,7 +57,7 @@ def format_lhotse_cuts(
 
         user_index = 0
         for index, conversation in enumerate(row["conversation"]):
-            if turn["role"] == "user":
+            if row["role"] == "user":
                 cut_id = f"{conversation_id}-{user_index}"
                 recordings.append(
                     Recording.from_file(
