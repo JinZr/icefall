@@ -28,6 +28,11 @@ def format_lhotse_cuts(
     def get_tts_conversation_id(wav_dir: str):
         return os.listdir(wav_dir)
 
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cache_dir = Path(cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
     tts_conversation_id = get_tts_conversation_id(wav_dir)
 
     iterable_dataset = (
@@ -38,9 +43,6 @@ def format_lhotse_cuts(
             cache_file_name=f"{cache_dir}/filtered",
         )
     )
-
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     recordings = []
     supervisions = []
@@ -135,13 +137,6 @@ def get_args():
         help="""Directory to saved TTS audio files""",
     )
 
-    parser.add_argument(
-        "--download-dir",
-        type=str,
-        default="./download/lmsys-chat-1m",
-        help="""Directory to save the downloaded huggingface dataset""",
-    )
-
     return parser.parse_args()
 
 
@@ -149,10 +144,7 @@ if __name__ == "__main__":
     args = get_args()
     logging.info(args)
 
-    dataset = load_dataset(
-        args.dataset,
-        cache_dir=args.download_dir,
-    )
+    dataset = load_dataset(args.dataset)
 
     format_lhotse_cuts(
         dataset=dataset,
