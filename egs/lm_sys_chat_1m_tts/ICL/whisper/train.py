@@ -450,13 +450,14 @@ def compute_loss(
         cut.supervisions[0].custom["prev_text"] for cut in batch["supervisions"]["cut"]
     ]
 
-    prev_text_tokens_list = [
-        list(tokenizer.sot_prev) + tokenizer.encode(prev_text) + [tokenizer.sot_lm]
-        for prev_text in prev_texts
-    ]
+    prev_text_tokens_list = []
+    for prev_text in prev_texts:
+        prev_text_tokens_list.append(
+            [tokenizer.sot_prev] + tokenizer.encode(prev_text) + [tokenizer.sot_lm]
+        )
+
     text_tokens_list = [
-        list(tokenizer.sot_lm) + tokenizer.encode(text) + [tokenizer.eot]
-        for text in texts
+        [tokenizer.sot_lm] + tokenizer.encode(text) + [tokenizer.eot] for text in texts
     ]
     # convert it to torch tensor
     prev_text_tokens_list = [
