@@ -812,9 +812,11 @@ def run(rank, world_size, args):
     else:
         sampler_state_dict = None
 
-    # cutset = lmsyschat.train_cuts().filter(lambda c: c.duration < 30.0)
-    train_cuts = lmsyschat.train_cuts()[500:]
-    valid_cuts = lmsyschat.train_cuts()[:500]
+    cutset = lmsyschat.train_cuts().filter(lambda c: c.duration < 30.0)
+    # train_cuts = lmsyschat.train_cuts()[500:]
+    # valid_cuts = lmsyschat.train_cuts()[:500]
+    train_cuts = cutset[500:]
+    valid_cuts = cutset[:500]
 
     train_dl = lmsyschat.train_dataloaders(train_cuts)
     valid_dl = lmsyschat.valid_dataloaders(valid_cuts)
