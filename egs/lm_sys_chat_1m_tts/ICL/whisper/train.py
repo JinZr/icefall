@@ -54,6 +54,7 @@ import whisper
 from deepspeed.utils.zero_to_fp32 import convert_zero_checkpoint_to_fp32_state_dict
 from icl_datamodule import LmsysChatIclDataModule
 from label_smoothing import LabelSmoothingLoss
+from lhotse.cut import Cut
 from lhotse.dataset.sampling.base import CutSampler
 from lhotse.utils import fix_random_seed
 from optim import Eden
@@ -819,6 +820,24 @@ def run(rank, world_size, args):
         sampler_state_dict = checkpoints["sampler"]
     else:
         sampler_state_dict = None
+
+    def remove_short_and_long_utt(c: Cut):
+        if c.duration > 30.0:
+            return False
+
+        T = c.num_frames
+        tokens = tokenizer.encode([c.supervisions[0].custom["prev_text"]])[0]
+        if T < len(tokens):
+            logging.warning(
+                f"Exclude cut with ID {c.id} from training. "
+                f"Number of frames (before subsampling): {c.num_frames}. "
+                f"Number of frames (after subsampling): {T}. "
+                f"Text: {c.supervisions[0].text}. "
+                f"Tokens: {tokens}. "
+                f"Number of tokens: {len(tokens)}"
+            )
+            return False
+        return True
 
     train_cuts = lmsyschat.train_cuts().filter(lambda c: c.duration < 30.0)
     valid_cuts = lmsyschat.dev_cuts().filter(lambda c: c.duration < 30.0)
