@@ -135,13 +135,24 @@ def get_args():
         help="""Directory to saved TTS audio files""",
     )
 
+    parser.add_argument(
+        "--download-dir",
+        type=str,
+        default="./download/lmsys-chat-1m",
+        help="""Directory to save the downloaded huggingface dataset""",
+    )
+
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
+    logging.info(args)
 
-    dataset = load_dataset(args.dataset)
+    dataset = load_dataset(
+        args.dataset,
+        data_dir=args.download_dir,
+    )
 
     format_lhotse_cuts(
         dataset=dataset,
