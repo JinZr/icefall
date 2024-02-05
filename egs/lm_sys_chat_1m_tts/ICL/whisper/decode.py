@@ -56,7 +56,7 @@ import torch.nn as nn
 import whisper
 from icl_datamodule import LmsysChatIclDataModule
 from lhotse.cut import Cut
-from whisper.normalizers import BasicTextNormalizer
+from whisper.normalizers import EnglishTextNormalizer
 from whisper_encoder_forward_monkey_patch import replace_whisper_encoder_forward
 from zhconv import convert
 
@@ -415,7 +415,7 @@ def main():
         beam_size=params.beam_size,
     )
     params.decoding_options = options
-    params.cleaner = BasicTextNormalizer()
+    params.cleaner = EnglishTextNormalizer()
 
     logging.info("Decoding started")
     logging.info(params)
