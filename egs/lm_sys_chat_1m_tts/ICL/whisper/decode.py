@@ -56,7 +56,6 @@ import torch.nn as nn
 import whisper
 from icl_datamodule import LmsysChatIclDataModule
 from lhotse.cut import Cut
-from tn.chinese.normalizer import Normalizer
 from whisper.normalizers import BasicTextNormalizer
 from whisper_encoder_forward_monkey_patch import replace_whisper_encoder_forward
 from zhconv import convert
@@ -286,7 +285,6 @@ def decode_one_batch(
 
     hyps = remove_punctuation(hyps)
     hyps = to_simple(hyps)
-    hyps = [params.normalizer.normalize(hyp) for hyp in hyps]
 
     return {"beam-search": hyps}
 
@@ -418,7 +416,6 @@ def main():
     )
     params.decoding_options = options
     params.cleaner = BasicTextNormalizer()
-    params.normalizer = Normalizer()
 
     logging.info("Decoding started")
     logging.info(params)
