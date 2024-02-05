@@ -55,6 +55,7 @@ import torch
 import torch.nn as nn
 import whisper
 from icl_datamodule import LmsysChatIclDataModule
+from lhotse.cut import Cut
 from tn.chinese.normalizer import Normalizer
 from whisper.normalizers import BasicTextNormalizer
 from whisper_encoder_forward_monkey_patch import replace_whisper_encoder_forward
@@ -478,8 +479,32 @@ def main():
 
     # we need cut ids to display recognition results.
     args.return_cuts = True
+
+    def remove_short_and_long_utt(c: Cut):
+        if c.duration > 30.0:
+            return False
+
+        T = c.num_features
+
+        # tokens = tokenizer.encode(
+        #     c.supervisions[0].custom["prev_text"], disallowed_special=[]
+        # )
+        if T // 2 - 2 < len(c.supervisions[0].text):
+            # logging.warning(
+            #     f"Exclude cut with ID {c.id} from training. "
+            #     f"Number of frames (before subsampling): {c.num_frames}. "
+            #     f"Number of frames (after subsampling): {T}. "
+            #     f"Text: {c.supervisions[0].text}. "
+            #     f"Tokens: {tokens}. "
+            #     f"Number of tokens: {len(tokens)}"
+            # )
+            return False
+        return True
+
     lmsyschat = LmsysChatIclDataModule(args)
-    valid_dl = lmsyschat.valid_dataloaders(lmsyschat.dev_cuts())
+    valid_dl = lmsyschat.valid_dataloaders(
+        lmsyschat.dev_cuts().filter(remove_short_and_long_utt)
+    )
     test_sets = ["valid"]
     test_dls = [valid_dl]
 
