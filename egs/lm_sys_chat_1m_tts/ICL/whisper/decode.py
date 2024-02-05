@@ -412,7 +412,6 @@ def main():
 
     options = whisper.DecodingOptions(
         task="transcribe",
-        language="zh",
         without_timestamps=True,
         beam_size=params.beam_size,
     )
