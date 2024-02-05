@@ -479,7 +479,7 @@ def main():
     # we need cut ids to display recognition results.
     args.return_cuts = True
     lmsyschat = LmsysChatIclDataModule(args)
-    valid_dl = lmsyschat.valid_dataloaders(lmsyschat.valid_cuts())
+    valid_dl = lmsyschat.valid_dataloaders(lmsyschat.dev_cuts())
     test_sets = ["valid"]
     test_dls = [valid_dl]
 
