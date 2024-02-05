@@ -54,7 +54,7 @@ import k2
 import torch
 import torch.nn as nn
 import whisper
-from egs.lm_sys_chat_1m_tts.ICL.whisper.icl_datamodule import AishellAsrDataModule
+from icl_datamodule import LmsysChatIclDataModule
 from tn.chinese.normalizer import Normalizer
 from whisper.normalizers import BasicTextNormalizer
 from whisper_encoder_forward_monkey_patch import replace_whisper_encoder_forward
@@ -398,7 +398,7 @@ def save_results(
 @torch.no_grad()
 def main():
     parser = get_parser()
-    AishellAsrDataModule.add_arguments(parser)
+    LmsysChatIclDataModule.add_arguments(parser)
     args = parser.parse_args()
     args.exp_dir = Path(args.exp_dir)
 
@@ -478,11 +478,10 @@ def main():
 
     # we need cut ids to display recognition results.
     args.return_cuts = True
-    aishell = AishellAsrDataModule(args)
-    valid_dl = aishell.valid_dataloaders(aishell.valid_cuts())
-    test_dl = aishell.test_dataloaders(aishell.test_cuts())
-    test_sets = ["valid", "test"]
-    test_dls = [valid_dl, test_dl]
+    lmsyschat = LmsysChatIclDataModule(args)
+    valid_dl = lmsyschat.valid_dataloaders(lmsyschat.valid_cuts())
+    test_sets = ["valid"]
+    test_dls = [valid_dl]
 
     for test_set, test_dl in zip(test_sets, test_dls):
         results_dict = decode_dataset(
