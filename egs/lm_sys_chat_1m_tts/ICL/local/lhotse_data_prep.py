@@ -80,8 +80,11 @@ def format_lhotse_cuts(
                         channel=0,
                         language=language,
                         speaker=model,
-                        text=conversation["content"],
-                        custom={"prev_text": prev_text},
+                        text=row["conversation"][index + 1]["content"],
+                        custom={
+                            "prev_text": prev_text,
+                            "transcription": conversation["content"],
+                        },
                     )
                 )
                 user_index += 1
