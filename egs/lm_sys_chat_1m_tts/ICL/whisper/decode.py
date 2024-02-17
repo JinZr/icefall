@@ -283,8 +283,8 @@ def decode_one_batch(
     results = model.decode(feature, params.decoding_options)
     hyps = [result.text for result in results]
 
-    hyps = remove_punctuation(hyps)
-    hyps = to_simple(hyps)
+    # hyps = remove_punctuation(hyps)
+    # hyps = to_simple(hyps)
 
     return {"beam-search": hyps}
 
@@ -325,6 +325,8 @@ def decode_dataset(
             model=model,
             batch=batch,
         )
+        print(hyps_dict)
+        exit()
 
         for lm_scale, hyps in hyps_dict.items():
             this_batch = []
