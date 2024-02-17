@@ -324,8 +324,6 @@ def decode_dataset(
             model=model,
             batch=batch,
         )
-        print(hyps_dict)
-        exit()
 
         for lm_scale, hyps in hyps_dict.items():
             this_batch = []
