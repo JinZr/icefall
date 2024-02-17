@@ -48,9 +48,8 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
-import k2
 import torch
 import torch.nn as nn
 import whisper
@@ -283,8 +282,8 @@ def decode_one_batch(
     results = model.decode(feature, params.decoding_options)
     hyps = [result.text for result in results]
 
-    hyps = remove_punctuation(hyps)
-    hyps = to_simple(hyps)
+    # hyps = remove_punctuation(hyps)
+    # hyps = to_simple(hyps)
 
     return {"beam-search": hyps}
 

@@ -111,7 +111,7 @@ def get_parser():
         default=12354,
         help="Master port to use for DDP training.",
     )
-    
+
     parser.add_argument(
         "--tensorboard",
         type=str2bool,
@@ -148,7 +148,7 @@ def get_parser():
     parser.add_argument(
         "--exp-dir",
         type=str,
-        default="pruned_transducer_stateless7/exp",
+        default="whisper/exp",
         help="""The experiment dir.
         It specifies the directory where all training related
         files, e.g., checkpoints, log, etc, are saved
