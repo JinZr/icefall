@@ -518,12 +518,13 @@ def compute_loss(
     # ignore the first 3 tokens, which are always
     # <|lang_id|>, <|transcibe|>, <|notimestampes|>
     # for the icl task, we do not ignore any tokens
-    ignore_prefix_size = 3
+    ignore_prefix_size = 1
     with torch.set_grad_enabled(is_training):
         encoder_out = model.encoder(feature)
         text_logits = model.decoder(output_target_tokens.to(device), encoder_out)
         text_logits = text_logits[:, ignore_prefix_size:, :]
         target_tokens = target_tokens[:, ignore_prefix_size:]
+        output_target_tokens = output_target_tokens[:, ignore_prefix_size:]
         loss = decoder_criterion(text_logits, output_target_tokens.to(device))
 
     assert loss.requires_grad == is_training
