@@ -48,9 +48,8 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
-import k2
 import torch
 import torch.nn as nn
 import whisper
