@@ -476,9 +476,10 @@ def compute_loss(
     text_tokens_list = []
     for text in texts:
         text_tokens_list.append(
-            list(tokenizer.sot_sequence_including_notimestamps)
-            + tokenizer.encode(text)
-            + [tokenizer.eot]
+            # list(tokenizer.sot_sequence_including_notimestamps)
+            # + tokenizer.encode(text)
+            # + [tokenizer.eot]
+            list(tokenizer.sot_lm)
         )
     # convert it to torch tensor
     prev_text_tokens_list = [
