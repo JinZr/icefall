@@ -150,7 +150,6 @@ if __name__ == "__main__":
     dataset = load_dataset(
         args.dataset,
         cache_dir="download/lmsys-chat-1m",
-        download_mode="reuse_cache_if_exists",
     )
 
     format_lhotse_cuts(
