@@ -147,7 +147,11 @@ if __name__ == "__main__":
     args = get_args()
     logging.info(args)
 
-    dataset = load_dataset(args.dataset, cache_dir="download/lmsys-chat-1m")
+    dataset = load_dataset(
+        args.dataset,
+        cache_dir="download/lmsys-chat-1m",
+        download_mode="reuse_cache_if_exists",
+    )
 
     format_lhotse_cuts(
         dataset=dataset,
