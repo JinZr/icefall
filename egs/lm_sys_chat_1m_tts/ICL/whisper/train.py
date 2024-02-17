@@ -99,6 +99,20 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--world-size",
+        type=int,
+        default=1,
+        help="Number of GPUs for DDP training.",
+    )
+
+    parser.add_argument(
+        "--master-port",
+        type=int,
+        default=12354,
+        help="Master port to use for DDP training.",
+    )
+    
+    parser.add_argument(
         "--tensorboard",
         type=str2bool,
         default=True,
@@ -803,7 +817,11 @@ def run(rank, world_size, args):
             )
         else:
             logging.info("Using DDP")
-            setup_dist(use_ddp_launch=True)
+            setup_dist(
+                use_ddp_launch=True,
+                world_size=world_size,
+                master_port=params.master_port,
+            )
             model = DDP(model, device_ids=[rank], find_unused_parameters=True)
 
     if params.print_diagnostics:
