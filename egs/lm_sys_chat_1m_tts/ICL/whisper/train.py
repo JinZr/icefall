@@ -49,6 +49,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import deepspeed
 import optim
 import torch
+import torch.multiprocessing as mp
 import torch.nn as nn
 import whisper
 from deepspeed.utils.zero_to_fp32 import convert_zero_checkpoint_to_fp32_state_dict
@@ -972,12 +973,14 @@ def main():
     args = parser.parse_args()
     args.exp_dir = Path(args.exp_dir)
 
-    world_size = get_world_size()
-    rank = get_rank()
-
     torch.set_num_threads(1)
     torch.set_num_interop_threads(1)
-    run(rank=rank, world_size=world_size, args=args)
+    world_size = args.world_size
+    assert world_size >= 1
+    if world_size > 1:
+        mp.spawn(run, args=(world_size, args), nprocs=world_size, join=True)
+    else:
+        run(rank=0, world_size=1, args=args)
 
 
 if __name__ == "__main__":
