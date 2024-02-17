@@ -819,6 +819,7 @@ def run(rank, world_size, args):
         else:
             logging.info("Using DDP")
             setup_dist(
+                rank=rank,
                 use_ddp_launch=True,
                 world_size=world_size,
                 master_port=params.master_port,
