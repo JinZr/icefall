@@ -474,6 +474,7 @@ def compute_loss(
         )
 
     text_tokens_list = []
+    output_text_token_list = []
     for text in texts:
         text_tokens_list.append(
             # list(tokenizer.sot_sequence_including_notimestamps)
@@ -481,6 +482,10 @@ def compute_loss(
             # + [tokenizer.eot]
             [tokenizer.sot_lm]
         )
+        output_text_token_list.append(
+            [tokenizer.sot_lm] + tokenizer.encode(text) + [tokenizer.eot]
+        )
+
     # convert it to torch tensor
     prev_text_tokens_list = [
         torch.LongTensor(text_tokens) for text_tokens in prev_text_tokens_list
@@ -488,13 +493,19 @@ def compute_loss(
     text_tokens_list = [
         torch.LongTensor(text_tokens) for text_tokens in text_tokens_list
     ]
+    output_text_token_list = [
+        torch.LongTensor(text_tokens) for text_tokens in output_text_token_list
+    ]
 
     # 50256 is the index of <pad> for all whisper models
     prev_outputs_tokens = _batch_tensors(
         [tokens[:-1] for tokens in prev_text_tokens_list], pad_value=50256
     )
     target_tokens = _batch_tensors(
-        [tokens[1:] for tokens in text_tokens_list], pad_value=50256
+        [tokens for tokens in text_tokens_list], pad_value=50256
+    )
+    output_target_tokens = _batch_tensors(
+        [tokens[1:] for tokens in output_text_token_list], pad_value=50256
     )
     target_lengths = torch.LongTensor(
         [tokens.shape[0] - 1 for tokens in prev_text_tokens_list]
@@ -513,7 +524,7 @@ def compute_loss(
         text_logits = model.decoder(target_tokens.to(device), encoder_out)
         text_logits = text_logits[:, ignore_prefix_size:, :]
         target_tokens = target_tokens[:, ignore_prefix_size:]
-        loss = decoder_criterion(text_logits, target_tokens.to(device))
+        loss = decoder_criterion(text_logits, output_target_tokens.to(device))
 
     assert loss.requires_grad == is_training
 
