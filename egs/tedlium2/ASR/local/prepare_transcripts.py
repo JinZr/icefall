@@ -1,0 +1,1 @@
+../../../tedlium3/ASR/local/prepare_transcripts.py
