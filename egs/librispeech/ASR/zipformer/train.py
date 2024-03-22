@@ -1341,6 +1341,8 @@ def scan_pessimistic_batches_for_oom(
     sp: spm.SentencePieceProcessor,
     params: AttributeDict,
 ):
+    import time
+    init_time = time.time()
     from lhotse.dataset import find_pessimistic_batches
 
     logging.info(
@@ -1374,6 +1376,8 @@ def scan_pessimistic_batches_for_oom(
         logging.info(
             f"Maximum memory allocated so far is {torch.cuda.max_memory_allocated()//1000000}MB"
         )
+    print(f"Sanity check took {time.time() - init_time:.2f} seconds")
+    exit()
 
 
 def main():
