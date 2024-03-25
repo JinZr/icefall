@@ -42,7 +42,7 @@ class FramePool(nn.Module):
 
         num_to_pool = int(batch_size * self.ratio)
         ind_to_pool = indexes_to_pool(batch_size, num_to_pool, device=feats.device)
-        print(ind_to_pool)
+        # print(ind_to_pool)
 
         feats_to_pool = feats.index_select(dim=0, index=ind_to_pool)
         feats_pooled = self.pool_layer(feats_to_pool.permute(0, 2, 1)).permute(0, 2, 1)
