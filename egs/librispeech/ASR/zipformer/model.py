@@ -23,6 +23,7 @@ import torch
 import torch.nn as nn
 from encoder_interface import EncoderInterface
 from frame_pool import FramePool
+from frame_reduce import indexes_to_merge, merge
 from scaling import ScaledLinear
 
 from icefall.utils import add_sos, make_pad_mask
@@ -84,7 +85,7 @@ class AsrModel(nn.Module):
         self.encoder = encoder
 
         # TODO: this is where we place the subsampling module
-        self.pool = FramePool(ratio=0.25)
+        # self.pool = FramePool(ratio=0.25)
 
         self.use_transducer = use_transducer
         if use_transducer:
@@ -330,7 +331,15 @@ class AsrModel(nn.Module):
         encoder_out, encoder_out_lens = self.forward_encoder(x, x_lens)
 
         # TODO: this is where we place the subsampling module
-        encoder_out = self.pool(encoder_out, max_len=encoder_out.size(1))
+        if self.training:
+            # encoder_out = self.pool(encoder_out, max_len=encoder_out.size(1))
+            num_to_merge = int(min(encoder_out_lens).item() * 0.25)
+            merge_indexes = indexes_to_merge(
+                num_frame=encoder_out.size(1), num_to_merge=num_to_merge
+            )
+            encoder_out = merge(encoder_out, merge_indexes)
+        else:
+            pass
 
         row_splits = y.shape.row_splits(1)
         y_lens = row_splits[1:] - row_splits[:-1]
