@@ -22,6 +22,7 @@ import k2
 import torch
 import torch.nn as nn
 from encoder_interface import EncoderInterface
+from frame_pool import FramePool
 from scaling import ScaledLinear
 
 from icefall.utils import add_sos, make_pad_mask
@@ -81,6 +82,9 @@ class AsrModel(nn.Module):
 
         self.encoder_embed = encoder_embed
         self.encoder = encoder
+
+        # TODO: this is where we place the subsampling module
+        self.pool = FramePool(ratio=0.25)
 
         self.use_transducer = use_transducer
         if use_transducer:
@@ -324,6 +328,9 @@ class AsrModel(nn.Module):
 
         # Compute encoder outputs
         encoder_out, encoder_out_lens = self.forward_encoder(x, x_lens)
+
+        # TODO: this is where we place the subsampling module
+        encoder_out = self.pool(encoder_out, max_len=encoder_out.size(1))
 
         row_splits = y.shape.row_splits(1)
         y_lens = row_splits[1:] - row_splits[:-1]
