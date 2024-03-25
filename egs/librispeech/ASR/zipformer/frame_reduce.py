@@ -27,13 +27,13 @@ def merge(feats: Tensor, dup_indexes: Tensor) -> Tensor:
 
     # feats: [batch_size, num_frames, num_features]
     to_merge_indexes = dup_indexes + 1
-    print(to_merge_indexes)
+    # print(to_merge_indexes)
 
     left_frames = feats.index_select(dim=1, index=dup_indexes)
     right_frames = feats.index_select(dim=1, index=to_merge_indexes)
 
     pooled_frames = (left_frames + right_frames) / 2
-    print(pooled_frames)
+    # print(pooled_frames)
     ret_feats = feats.index_copy(dim=1, index=dup_indexes, source=pooled_frames)
     ret_feats.index_copy_(dim=1, index=to_merge_indexes, source=pooled_frames)
 

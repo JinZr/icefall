@@ -335,7 +335,9 @@ class AsrModel(nn.Module):
             # encoder_out = self.pool(encoder_out, max_len=encoder_out.size(1))
             num_to_merge = int(min(encoder_out_lens).item() * 0.25)
             merge_indexes = indexes_to_merge(
-                num_frame=encoder_out.size(1), num_to_merge=num_to_merge
+                num_frame=encoder_out.size(1),
+                num_to_merge=num_to_merge,
+                device=x.device,
             )
             encoder_out = merge(encoder_out, merge_indexes)
         else:
