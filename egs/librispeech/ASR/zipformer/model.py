@@ -41,6 +41,7 @@ class AsrModel(nn.Module):
         vocab_size: int = 500,
         use_transducer: bool = True,
         use_ctc: bool = False,
+        ratio: float = 0.25,
     ):
         """A joint CTC & Transducer ASR model.
 
@@ -86,6 +87,7 @@ class AsrModel(nn.Module):
 
         # TODO: this is where we place the subsampling module
         # self.pool = FramePool(ratio=0.25)
+        self.ratio = ratio
 
         self.use_transducer = use_transducer
         if use_transducer:
@@ -333,7 +335,7 @@ class AsrModel(nn.Module):
         # TODO: this is where we place the subsampling module
         if self.training:
             # encoder_out = self.pool(encoder_out, max_len=encoder_out.size(1))
-            num_to_merge = int(min(encoder_out_lens).item() * 0.25)
+            num_to_merge = int(min(encoder_out_lens).item() * self.ratio)
             merge_indexes = indexes_to_merge(
                 num_frame=encoder_out.size(1),
                 num_to_merge=num_to_merge,

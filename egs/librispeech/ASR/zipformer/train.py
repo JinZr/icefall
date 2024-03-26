@@ -259,6 +259,11 @@ def add_model_arguments(parser: argparse.ArgumentParser):
         help="If True, use CTC head.",
     )
 
+    parser.add_argument(
+        "--ratio",
+        type=float,
+    )
+
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -631,6 +636,7 @@ def get_model(params: AttributeDict) -> nn.Module:
         vocab_size=params.vocab_size,
         use_transducer=params.use_transducer,
         use_ctc=params.use_ctc,
+        ratio=params.ratio,
     )
     return model
 
