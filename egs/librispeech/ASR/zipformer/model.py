@@ -24,7 +24,7 @@ import torch.nn as nn
 from encoder_interface import EncoderInterface
 from frame_pool import FramePool
 from frame_reduce import indexes_to_merge, merge
-from scaling import ScaledLinear
+from scaling import ScaledLinear, ScheduledFloat
 
 from icefall.utils import add_sos, make_pad_mask
 
@@ -87,7 +87,11 @@ class AsrModel(nn.Module):
 
         # TODO: this is where we place the subsampling module
         # self.pool = FramePool(ratio=0.25)
-        self.ratio = ratio
+        # self.ratio = ratio
+        # ratio ver 1 (0.0, 0.25), (100000.0, 0.1)
+        self.ratio = ScheduledFloat((0.0, 0.25), (100000.0, 0.1), default=0.25)
+
+        # ScheduledFloat((), (), default=0.2)
 
         self.use_transducer = use_transducer
         if use_transducer:
@@ -335,7 +339,7 @@ class AsrModel(nn.Module):
         # TODO: this is where we place the subsampling module
         if self.training:
             # encoder_out = self.pool(encoder_out, max_len=encoder_out.size(1))
-            num_to_merge = int(min(encoder_out_lens).item() * self.ratio)
+            num_to_merge = int(min(encoder_out_lens).item() * float(self.ratio))
             merge_indexes = indexes_to_merge(
                 num_frame=encoder_out.size(1),
                 num_to_merge=num_to_merge,
