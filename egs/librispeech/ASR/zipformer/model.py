@@ -41,7 +41,6 @@ class AsrModel(nn.Module):
         vocab_size: int = 500,
         use_transducer: bool = True,
         use_ctc: bool = False,
-        ratio: float = 0.25,
     ):
         """A joint CTC & Transducer ASR model.
 
