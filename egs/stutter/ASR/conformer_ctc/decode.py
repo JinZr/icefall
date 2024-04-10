@@ -26,7 +26,7 @@ from typing import Dict, List, Optional, Tuple
 import k2
 import torch
 import torch.nn as nn
-from asr_datamodule import AishellAsrDataModule
+from asr_datamodule import StutteringAsrDataModule
 from conformer import Conformer
 
 from icefall.char_graph_compiler import CharCtcTrainingGraphCompiler
@@ -461,7 +461,7 @@ def save_results(
 @torch.no_grad()
 def main():
     parser = get_parser()
-    AishellAsrDataModule.add_arguments(parser)
+    StutteringAsrDataModule.add_arguments(parser)
     args = parser.parse_args()
     args.exp_dir = Path(args.exp_dir)
     args.lang_dir = Path(args.lang_dir)
@@ -541,9 +541,9 @@ def main():
 
     # we need cut ids to display recognition results.
     args.return_cuts = True
-    aishell = AishellAsrDataModule(args)
-    test_cuts = aishell.test_cuts()
-    test_dl = aishell.test_dataloaders(test_cuts)
+    stutter = StutteringAsrDataModule(args)
+    test_cuts = stutter.test_cuts()
+    test_dl = stutter.test_dataloaders(test_cuts)
 
     test_sets = ["test"]
     test_dls = [test_dl]

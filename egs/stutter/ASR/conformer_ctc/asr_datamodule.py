@@ -381,4 +381,7 @@ class StutteringAsrDataModule:
     @lru_cache()
     def test_cuts(self) -> List[CutSet]:
         logging.info("About to get test cuts")
-        return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_test.jsonl.gz")
+        # return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_test.jsonl.gz")
+        return load_manifest(self.args.manifest_dir / "stutter_cuts_train.jsonl.gz")[
+            :200
+        ]
