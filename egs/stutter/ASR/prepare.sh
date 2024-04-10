@@ -51,7 +51,7 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
   if [ ! -f data/manifests/.stutter_manifests.done ]; then
     mkdir -p data/manifests
 
-    if [ ! -f .stutter_preprocess.done ]; then
+    if [ ! -f ${data_dir}/.stutter_preprocess.done ]; then
       for dir in train dev test; do
           if [ ! -d ${data_dir}/$dir ]; then
               log "Error: ${data_dir}/$dir does not exist"
@@ -63,10 +63,10 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
           fi
       done
 
-      touch .stutter_preprocess.done
+      touch ${data_dir}/.stutter_preprocess.done
     fi
 
-    if [ ! -f .stutter_lhotse.done ]; then
+    if [ ! -f ${data_dir}/.stutter_lhotse.done ]; then
       for dir in train dev test; do
           if [ ! -d ${data_dir}/$dir ]; then
               log "Error: ${data_dir}/$dir does not exist"
@@ -80,7 +80,7 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
           fi
       done
 
-      touch .stutter_lhotse.done
+      touch ${data_dir}/.stutter_lhotse.done
     fi
 
     touch data/manifests/.stutter_manifests.done
