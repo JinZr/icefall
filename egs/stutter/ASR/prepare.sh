@@ -150,3 +150,44 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
     ./local/prepare_char.py --lang-dir $lang_char_dir
   fi
 fi
+
+if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
+  log "Stage 6: Prepare G"
+
+  mkdir -p data/lm
+
+  # Train LM on transcripts
+  if [ ! -f data/lm/3-gram.unpruned.arpa ]; then
+    python3 ./shared/make_kn_lm.py \
+      -ngram-order 3 \
+      -text $lang_char_dir/text.segment \
+      -lm data/lm/3-gram.unpruned.arpa
+  fi
+
+  # We assume you have installed kaldilm, if not, please install
+  # it using: pip install kaldilm
+  if [ ! -f data/lm/G_3_gram_char.fst.txt ]; then
+    # It is used in building HLG
+
+    python3 -m kaldilm \
+      --read-symbol-table="$lang_char_dir/words.txt" \
+      --disambig-symbol='#0' \
+      --max-order=3 \
+      data/lm/3-gram.unpruned.arpa > data/lm/G_3_gram_char.fst.txt
+  fi
+
+  if [ ! -f $lang_char_dir/HLG.fst ]; then
+    ./local/prepare_lang_fst.py  \
+      --lang-dir $lang_char_dir \
+      --ngram-G ./data/lm/G_3_gram_char.fst.txt
+  fi
+fi
+
+if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
+  log "Stage 7: Compile LG & HLG"
+  
+  ./local/compile_hlg.py --lang-dir $lang_char_dir --lm G_3_gram_char
+
+  ./local/compile_lg.py --lang-dir $lang_char_dir --lm G_3_gram_char
+
+fi
