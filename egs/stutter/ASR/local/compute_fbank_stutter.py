@@ -49,7 +49,7 @@ torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
 
 
-def compute_fbank_aishell(
+def compute_fbank_stutter(
     num_mel_bins: int = 80,
     perturb_speed: bool = False,
     whisper_fbank: bool = False,
@@ -61,8 +61,8 @@ def compute_fbank_aishell(
 
     dataset_parts = (
         "train",
-        "dev",
-        "test",
+        # "dev",
+        # "test",
     )
     prefix = "stutter"
     suffix = "jsonl.gz"
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     logging.basicConfig(format=formatter, level=logging.INFO)
 
     args = get_args()
-    compute_fbank_aishell(
+    compute_fbank_stutter(
         num_mel_bins=args.num_mel_bins,
         perturb_speed=args.perturb_speed,
         whisper_fbank=args.whisper_fbank,
