@@ -105,7 +105,7 @@ if __name__ == "__main__":
     preprocessed_lines = dict()
     for key, line in tqdm(text_dict.items(), desc="preprocessing text"):
         new_line = line.strip().upper().replace(",", "")
-        seg_list = jieba.cut(new_line, use_paddle=True)
+        seg_list = jieba.lcut(new_line, use_paddle=True)
         seg_line = " ".join(seg_list)
 
         preprocessed_line = ""
