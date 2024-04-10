@@ -48,24 +48,41 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
   log "Stage 1: Prepare Stuttering Speech Challenge manifest"
   # We assume that you have downloaded the aishell corpus
   # to $dl_dir/aishell
-  if [ ! -d data/manifests/.stutter_manifests.done ]; then
+  if [ ! -f data/manifests/.stutter_manifests.done ]; then
     mkdir -p data/manifests
-    for dir in train dev test; do
-        if [ ! -d ${data_dir}/$dir ]; then
-            log "Error: ${data_dir}/$dir does not exist"
-            exit 1
-        else
-            ./local/preprocess_stutter.py --kaldi-dir ${data_dir}/$dir 
-            mv ${data_dir}/$dir/text ${data_dir}/$dir/text.orig
-            mv ${data_dir}/$dir/text.preprocessed ${data_dir}/$dir/text
 
+    if [ ! -f .stutter_preprocess.done ]; then
+      for dir in train dev test; do
+          if [ ! -d ${data_dir}/$dir ]; then
+              log "Error: ${data_dir}/$dir does not exist"
+              exit 1
+          else
+              ./local/preprocess_stutter.py --kaldi-dir ${data_dir}/$dir 
+              mv ${data_dir}/$dir/text ${data_dir}/$dir/text.orig
+              mv ${data_dir}/$dir/text.preprocessed ${data_dir}/$dir/text
+          fi
+      done
+
+      touch .stutter_preprocess.done
+    fi
+
+    if [ ! -f .stutter_lhotse.done ]; then
+      for dir in train dev test; do
+          if [ ! -d ${data_dir}/$dir ]; then
+              log "Error: ${data_dir}/$dir does not exist"
+              exit 1
+          else
             lhotse kaldi import ${data_dir}/$dir 16000 data/manifests/
 
             mv data/manifests/cuts.jsonl.gz data/manifests/stutter_cuts_${dir}.jsonl.gz
             mv data/manifests/recordings.jsonl.gz data/manifests/stutter_recordings_${dir}.jsonl.gz
             mv data/manifests/supervisions.jsonl.gz data/manifests/stutter_supervisions_${dir}.jsonl.gz
-        fi
-    done
+          fi
+      done
+
+      touch .stutter_lhotse.done
+    fi
+
     touch data/manifests/.stutter_manifests.done
   fi
 fi
