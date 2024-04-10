@@ -120,7 +120,7 @@ if __name__ == "__main__":
             else:
                 preprocessed_line += f" {word}"
                 last_is_cjk = False
-        preprocessed_lines[key] = new_line
+        preprocessed_lines[key] = preprocessed_line
         seg_lines[key] = seg_line
 
     write_file_dict(preprocessed_lines, text_preprocessed)
