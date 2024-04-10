@@ -158,9 +158,12 @@ if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
 
   # Train LM on transcripts
   if [ ! -f data/lm/3-gram.unpruned.arpa ]; then
+    cat $lang_char_dir/text.segment |  cut -d " " -f 2- \
+      > $lang_char_dir/text.lm
+
     python3 ./shared/make_kn_lm.py \
       -ngram-order 3 \
-      -text $lang_char_dir/text.segment \
+      -text $lang_char_dir/text.lm \
       -lm data/lm/3-gram.unpruned.arpa
   fi
 
