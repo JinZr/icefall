@@ -123,7 +123,7 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   mkdir -p $lang_char_dir
 
   if [ ! -f $lang_char_dir/text ]; then
-    cat ${data_dir}/train/text > $lang_char_dir/text
+    cat ${data_dir}/train/text > $lang_char_dir/text.orig
     # cat ${data_dir}/dev/text >> $lang_char_dir/text
     # cat ${data_dir}/test/text >> $lang_char_dir/text
   fi
@@ -137,7 +137,9 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   (echo '<eps> 0'; echo '!SIL 1'; echo '<SPOKEN_NOISE> 2'; echo '<UNK> 3';) \
     > $lang_char_dir/words.txt
 
-  cat $lang_char_dir/text.segment | sed 's/ /\n/g' | sort -u | sed '/^$/d' \
+  cat $lang_char_dir/text.orig | cut -d " " -f 2- > $lang_char_dir/text
+
+  cat $lang_char_dir/text.segment |  cut -d " " -f 2- | sed 's/ /\n/g' | sort -u | sed '/^$/d' \
      | awk '{print $1" "NR+3}' >> $lang_char_dir/words.txt
 
   num_lines=$(< $lang_char_dir/words.txt wc -l)
