@@ -129,6 +129,6 @@ if __name__ == "__main__":
 
     utt2spk_lines = dict()
     for key in preprocessed_lines.keys():
-        utt2spk_lines[key] = key
+        utt2spk_lines[key] = key.split("/")[-2]  # get the spkr index
 
     write_file_dict(utt2spk_lines, utt2spk)
