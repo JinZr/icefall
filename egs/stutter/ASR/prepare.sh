@@ -10,6 +10,9 @@ stage=-1
 stop_stage=11
 perturb_speed=true
 
+# Aishell-1 corpus is allowed to be used in this challenge
+use_aishell=false
+
 dl_dir=$PWD/download
 
 # We assume you have used the official script 
@@ -33,6 +36,24 @@ log "dl_dir: $dl_dir"
 
 if [ $stage -le 0 ] && [ $stop_stage -ge 0 ]; then
   log "stage 0: Download data"
+
+  # If you have pre-downloaded it to /path/to/aishell,
+  # you can create a symlink
+  #
+  #   ln -sfv /path/to/aishell $dl_dir/aishell
+  #
+  # The directory structure is
+  # aishell/
+  # |-- data_aishell
+  # |   |-- transcript
+  # |   `-- wav
+  # `-- resource_aishell
+  #     |-- lexicon.txt
+  #     `-- speaker.info
+
+  if [ $use_aishell = true ] && [ ! -d $dl_dir/aishell/data_aishell/wav/train ]; then
+    lhotse download aishell $dl_dir
+  fi
 
   # If you have pre-downloaded it to /path/to/musan,
   # you can create a symlink
@@ -88,7 +109,20 @@ if [ $stage -le 1 ] && [ $stop_stage -ge 1 ]; then
 fi
 
 if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
-  log "Stage 2: Prepare musan manifest"
+  log "Stage 2: Prepare aishell manifest"
+  # We assume that you have downloaded the aishell corpus
+  # to $dl_dir/aishell
+  if [ $use_aishell = true ] && [ ! -f data/manifests/.aishell_manifests.done ]; then
+    mkdir -p data/manifests
+    lhotse prepare aishell $dl_dir/aishell data/manifests
+    touch data/manifests/.aishell_manifests.done
+  else
+    log "Skip stage 2: Prepare aishell manifest"
+  fi
+fi
+
+if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
+  log "Stage 3: Prepare musan manifest"
   # We assume that you have downloaded the musan corpus
   # to data/musan
   if [ ! -f data/manifests/.musan_manifests.done ]; then
@@ -99,8 +133,17 @@ if [ $stage -le 2 ] && [ $stop_stage -ge 2 ]; then
   fi
 fi
 
-if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
-  log "Stage 3: Compute fbank for Stuttering Speech Challenge"
+if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
+  log "Stage 4: Compute fbank for aishell"
+  if [ ! -f data/fbank/.aishell.done ]; then
+    mkdir -p data/fbank
+    ./local/compute_fbank_aishell.py --perturb-speed ${perturb_speed}
+    touch data/fbank/.aishell.done
+  fi
+fi
+
+if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
+  log "Stage 5: Compute fbank for Stuttering Speech Challenge"
   if [ ! -f data/fbank/.stutter.done ]; then
     mkdir -p data/fbank
     ./local/compute_fbank_stutter.py --perturb-speed ${perturb_speed}
@@ -108,8 +151,8 @@ if [ $stage -le 3 ] && [ $stop_stage -ge 3 ]; then
   fi
 fi
 
-if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
-  log "Stage 4: Compute fbank for musan"
+if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
+  log "Stage 6: Compute fbank for musan"
   if [ ! -f data/fbank/.msuan.done ]; then
     mkdir -p data/fbank
     ./local/compute_fbank_musan.py
@@ -118,8 +161,8 @@ if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
 fi
 
 lang_char_dir=data/lang_char
-if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
-  log "Stage 5: Prepare char based lang"
+if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
+  log "Stage 7: Prepare char based lang"
   mkdir -p $lang_char_dir
 
   if [ ! -f $lang_char_dir/text ]; then
