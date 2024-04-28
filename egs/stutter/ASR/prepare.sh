@@ -194,7 +194,7 @@ if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
   fi
 fi
 
-if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
+if [ $stage -le 8 ] && [ $stop_stage -ge 8 ]; then
   log "Stage 8: Prepare G"
 
   mkdir -p data/lm
@@ -229,7 +229,7 @@ if [ $stage -le 6 ] && [ $stop_stage -ge 6 ]; then
   fi
 fi
 
-if [ $stage -le 7 ] && [ $stop_stage -ge 7 ]; then
+if [ $stage -le 9 ] && [ $stop_stage -ge 9 ]; then
   log "Stage 9: Compile LG & HLG"
   
   ./local/compile_hlg.py --lang-dir $lang_char_dir --lm G_3_gram_char
