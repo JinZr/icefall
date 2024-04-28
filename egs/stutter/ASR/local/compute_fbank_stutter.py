@@ -61,7 +61,7 @@ def compute_fbank_stutter(
 
     dataset_parts = (
         "train",
-        # "dev",
+        "dev",
         # "test",
     )
     prefix = "stutter"

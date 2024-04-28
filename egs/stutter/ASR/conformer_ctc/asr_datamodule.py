@@ -369,18 +369,18 @@ class StutteringAsrDataModule:
         # self.args.manifest_dir / "stutter_cuts_train.jsonl.gz"
         # )
         cuts_train = load_manifest_lazy(
-            self.args.manifest_dir / "stutter_cuts_train_filtered_0037.jsonl.gz"
+            self.args.manifest_dir / "stutter_cuts_train.jsonl.gz"
         )
         return cuts_train
 
     @lru_cache()
     def valid_cuts(self) -> CutSet:
         logging.info("About to get dev cuts")
-        # return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_dev.jsonl.gz")
-        return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_0037.jsonl.gz")
+        return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_dev.jsonl.gz")
+        # return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_0037.jsonl.gz")
 
     @lru_cache()
     def test_cuts(self) -> List[CutSet]:
         logging.info("About to get test cuts")
-        # return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_test.jsonl.gz")
-        return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_0037.jsonl.gz")
+        return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_test.jsonl.gz")
+        # return load_manifest_lazy(self.args.manifest_dir / "stutter_cuts_0037.jsonl.gz")
