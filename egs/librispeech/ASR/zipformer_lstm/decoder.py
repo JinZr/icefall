@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -36,32 +38,41 @@ class Decoder(nn.Module):
     def __init__(
         self,
         vocab_size: int,
-        decoder_dim: int,
         blank_id: int,
-        context_size: int,
+        embedding_dim: int,
+        num_layers: int,
+        hidden_dim: int,
+        embedding_dropout: float = 0.0,
+        rnn_dropout: float = 0.0,
     ):
         """
         Args:
           vocab_size:
             Number of tokens of the modeling unit including blank.
-          decoder_dim:
-            Dimension of the input embedding, and of the decoder output.
           blank_id:
             The ID of the blank symbol.
-          context_size:
-            Number of previous words to use to predict the next word.
-            1 means bigram; 2 means trigram. n means (n+1)-gram.
+          embedding_dim:
+            Dimension of the input embedding.
+          num_layers:
+            Number of LSTM layers.
+          hidden_dim:
+            Hidden dimension of LSTM layers.
+          embedding_dropout:
+            Dropout rate for the embedding layer.
+          rnn_dropout:
+            Dropout for LSTM layers.
         """
         super().__init__()
 
         self.embedding = nn.Embedding(
             num_embeddings=vocab_size,
-            embedding_dim=decoder_dim,
+            embedding_dim=embedding_dim,
+            padding_idx=blank_id,
         )
         # the balancers are to avoid any drift in the magnitude of the
         # embeddings, which would interact badly with parameter averaging.
         self.balancer = Balancer(
-            decoder_dim,
+            embedding_dim,
             channel_dim=-1,
             min_positive=0.0,
             max_positive=1.0,
@@ -72,35 +83,33 @@ class Decoder(nn.Module):
 
         self.blank_id = blank_id
 
-        assert context_size >= 1, context_size
-        self.context_size = context_size
         self.vocab_size = vocab_size
 
-        if context_size > 1:
-            self.conv = nn.Conv1d(
-                in_channels=decoder_dim,
-                out_channels=decoder_dim,
-                kernel_size=context_size,
-                padding=0,
-                groups=decoder_dim // 4,  # group size == 4
-                bias=False,
-            )
-            self.balancer2 = Balancer(
-                decoder_dim,
-                channel_dim=-1,
-                min_positive=0.0,
-                max_positive=1.0,
-                min_abs=0.5,
-                max_abs=1.0,
-                prob=0.05,
-            )
-        else:
-            # To avoid `RuntimeError: Module 'Decoder' has no attribute 'conv'`
-            # when inference with torch.jit.script and context_size == 1
-            self.conv = nn.Identity()
-            self.balancer2 = nn.Identity()
+        self.embedding_dropout = nn.Dropout(embedding_dropout)
+        # TODO(fangjun): Use layer normalized LSTM
+        self.rnn = nn.LSTM(
+            input_size=embedding_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=rnn_dropout,
+        )
 
-    def forward(self, y: torch.Tensor, need_pad: bool = True) -> torch.Tensor:
+        self.balancer2 = Balancer(
+            embedding_dim,
+            channel_dim=-1,
+            min_positive=0.0,
+            max_positive=1.0,
+            min_abs=0.5,
+            max_abs=1.0,
+            prob=0.05,
+        )
+
+    def forward(
+        self,
+        y: torch.Tensor,
+        states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+    ) -> torch.Tensor:
         """
         Args:
           y:
@@ -109,7 +118,7 @@ class Decoder(nn.Module):
             True to left pad the input. Should be True during training.
             False to not pad the input. Should be False during inference.
         Returns:
-          Return a tensor of shape (N, U, decoder_dim).
+          Return a tensor of shape (N, U, hidden_dim).
         """
         y = y.to(torch.int64)
         # this stuff about clamp() is a temporary fix for a mismatch
@@ -118,17 +127,9 @@ class Decoder(nn.Module):
 
         embedding_out = self.balancer(embedding_out)
 
-        if self.context_size > 1:
-            embedding_out = embedding_out.permute(0, 2, 1)
-            if need_pad is True:
-                embedding_out = F.pad(embedding_out, pad=(self.context_size - 1, 0))
-            else:
-                # During inference time, there is no need to do extra padding
-                # as we only need one output
-                assert embedding_out.size(-1) == self.context_size
-            embedding_out = self.conv(embedding_out)
-            embedding_out = embedding_out.permute(0, 2, 1)
-            embedding_out = F.relu(embedding_out)
-            embedding_out = self.balancer2(embedding_out)
+        rnn_out, (h, c) = self.rnn(embedding_out, states)
+        rnn_out = F.relu(rnn_out)
+        rnn_out = self.balancer2(rnn_out)
+        print(rnn_out.shape)
 
-        return embedding_out
+        return rnn_out, (h, c)
