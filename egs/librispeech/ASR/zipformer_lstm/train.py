@@ -534,6 +534,10 @@ def get_params() -> AttributeDict:
             "subsampling_factor": 4,  # not passed in, this is fixed.
             "warm_step": 2000,
             "env_info": get_env_info(),
+            # decoder params
+            "decoder_embedding_dim": 1024,
+            "num_decoder_layers": 4,
+            "decoder_hidden_dim": 512,
         }
     )
 
@@ -587,9 +591,10 @@ def get_encoder_model(params: AttributeDict) -> nn.Module:
 def get_decoder_model(params: AttributeDict) -> nn.Module:
     decoder = Decoder(
         vocab_size=params.vocab_size,
-        decoder_dim=params.decoder_dim,
         blank_id=params.blank_id,
-        context_size=params.context_size,
+        embedding_dim=params.decoder_embedding_dim,
+        num_layers=params.num_decoder_layers,
+        hidden_dim=params.decoder_hidden_dim,
     )
     return decoder
 
