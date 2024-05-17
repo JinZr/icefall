@@ -29,7 +29,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3"
   --num-epochs 30 \
   --start-epoch 1 \
   --use-fp16 1 \
-  --exp-dir zipformer/exp \
+  --exp-dir zipformer_lstm/exp \
   --full-libri 1 \
   --max-duration 1000
 
@@ -39,7 +39,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3"
   --num-epochs 30 \
   --start-epoch 1 \
   --use-fp16 1 \
-  --exp-dir zipformer/exp \
+  --exp-dir zipformer_lstm/exp \
   --causal 1 \
   --full-libri 1 \
   --max-duration 1000
@@ -315,7 +315,7 @@ def get_parser():
     parser.add_argument(
         "--exp-dir",
         type=str,
-        default="zipformer/exp",
+        default="zipformer_lstm/exp",
         help="""The experiment dir.
         It specifies the directory where all training related
         files, e.g., checkpoints, log, etc, are saved
@@ -967,9 +967,7 @@ def train_one_epoch(
             scaler.update()
             optimizer.zero_grad()
         except Exception as e:
-            logging.info(
-                f"Caught exception: {e}."
-            )
+            logging.info(f"Caught exception: {e}.")
             save_bad_model()
             display_and_save_batch(batch, params=params, sp=sp)
             raise
