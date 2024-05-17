@@ -129,7 +129,7 @@ class Decoder(nn.Module):
 
         rnn_out, (h, c) = self.rnn(embedding_out, states)
         rnn_out = F.relu(rnn_out)
-        rnn_out = self.balancer2(rnn_out)
+        rnn_out = self.balancer2(rnn_out.permute(0, 2, 1)).permute(0, 2, 1)
         # print(rnn_out.shape)
 
         return rnn_out, (h, c)
