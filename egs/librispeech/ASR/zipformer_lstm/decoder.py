@@ -96,7 +96,7 @@ class Decoder(nn.Module):
         )
 
         self.balancer2 = Balancer(
-            embedding_dim,
+            hidden_dim,
             channel_dim=-1,
             min_positive=0.0,
             max_positive=1.0,
@@ -129,7 +129,7 @@ class Decoder(nn.Module):
 
         rnn_out, (h, c) = self.rnn(embedding_out, states)
         rnn_out = F.relu(rnn_out)
-        rnn_out = self.balancer2(rnn_out.permute(0, 2, 1)).permute(0, 2, 1)
+        rnn_out = self.balancer2(rnn_out)
         # print(rnn_out.shape)
 
         return rnn_out, (h, c)
