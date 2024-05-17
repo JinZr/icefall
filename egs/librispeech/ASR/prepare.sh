@@ -184,6 +184,9 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
   for vocab_size in ${vocab_sizes[@]}; do
     lang_dir=data/lang_bpe_${vocab_size}
     mkdir -p $lang_dir
+    # We reuse words.txt from phone based lexicon
+    # so that the two can share G.pt later.
+    cp data/lang_phone/words.txt $lang_dir
 
     if [ ! -f $lang_dir/transcript_words.txt ]; then
       log "Generate data for BPE training"
