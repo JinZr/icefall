@@ -208,7 +208,7 @@ class AsrModel(nn.Module):
         sos_y_padded = sos_y.pad(mode="constant", padding_value=blank_id)
 
         # decoder_out: [B, S + 1, decoder_dim]
-        decoder_out = self.decoder(sos_y_padded)
+        decoder_out, _ = self.decoder(sos_y_padded)
 
         # Note: y does not start with SOS
         # y_padded : [B, S]
