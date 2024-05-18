@@ -19,36 +19,36 @@
 """
 Usage:
 (1) greedy search
-./zipformer/decode.py \
+./zipformer_lstm/decode.py \
     --epoch 28 \
     --avg 15 \
-    --exp-dir ./zipformer/exp \
+    --exp-dir ./zipformer_lstm/exp \
     --max-duration 600 \
     --decoding-method greedy_search
 
 (2) beam search (not recommended)
-./zipformer/decode.py \
+./zipformer_lstm/decode.py \
     --epoch 28 \
     --avg 15 \
-    --exp-dir ./zipformer/exp \
+    --exp-dir ./zipformer_lstm/exp \
     --max-duration 600 \
     --decoding-method beam_search \
     --beam-size 4
 
 (3) modified beam search
-./zipformer/decode.py \
+./zipformer_lstm/decode.py \
     --epoch 28 \
     --avg 15 \
-    --exp-dir ./zipformer/exp \
+    --exp-dir ./zipformer_lstm/exp \
     --max-duration 600 \
     --decoding-method modified_beam_search \
     --beam-size 4
 
 (4) fast beam search (one best)
-./zipformer/decode.py \
+./zipformer_lstm/decode.py \
     --epoch 28 \
     --avg 15 \
-    --exp-dir ./zipformer/exp \
+    --exp-dir ./zipformer_lstm/exp \
     --max-duration 600 \
     --decoding-method fast_beam_search \
     --beam 20.0 \
@@ -56,10 +56,10 @@ Usage:
     --max-states 64
 
 (5) fast beam search (nbest)
-./zipformer/decode.py \
+./zipformer_lstm/decode.py \
     --epoch 28 \
     --avg 15 \
-    --exp-dir ./zipformer/exp \
+    --exp-dir ./zipformer_lstm/exp \
     --max-duration 600 \
     --decoding-method fast_beam_search_nbest \
     --beam 20.0 \
@@ -69,10 +69,10 @@ Usage:
     --nbest-scale 0.5
 
 (6) fast beam search (nbest oracle WER)
-./zipformer/decode.py \
+./zipformer_lstm/decode.py \
     --epoch 28 \
     --avg 15 \
-    --exp-dir ./zipformer/exp \
+    --exp-dir ./zipformer_lstm/exp \
     --max-duration 600 \
     --decoding-method fast_beam_search_nbest_oracle \
     --beam 20.0 \
@@ -82,10 +82,10 @@ Usage:
     --nbest-scale 0.5
 
 (7) fast beam search (with LG)
-./zipformer/decode.py \
+./zipformer_lstm/decode.py \
     --epoch 28 \
     --avg 15 \
-    --exp-dir ./zipformer/exp \
+    --exp-dir ./zipformer_lstm/exp \
     --max-duration 600 \
     --decoding-method fast_beam_search_nbest_LG \
     --beam 20.0 \
@@ -107,20 +107,7 @@ import sentencepiece as spm
 import torch
 import torch.nn as nn
 from asr_datamodule import LibriSpeechAsrDataModule
-from beam_search import (
-    beam_search,
-    fast_beam_search_nbest,
-    fast_beam_search_nbest_LG,
-    fast_beam_search_nbest_oracle,
-    fast_beam_search_one_best,
-    greedy_search,
-    greedy_search_batch,
-    modified_beam_search,
-    modified_beam_search_lm_rescore,
-    modified_beam_search_lm_rescore_LODR,
-    modified_beam_search_lm_shallow_fusion,
-    modified_beam_search_LODR,
-)
+from beam_search import beam_search, greedy_search
 from train import add_model_arguments, get_model, get_params
 
 from icefall import ContextGraph, LmScorer, NgramLm
@@ -190,7 +177,7 @@ def get_parser():
     parser.add_argument(
         "--exp-dir",
         type=str,
-        default="zipformer/exp",
+        default="zipformer_lstm/exp",
         help="The experiment dir",
     )
 
@@ -276,12 +263,6 @@ def get_parser():
         and fast_beam_search_nbest_oracle""",
     )
 
-    parser.add_argument(
-        "--context-size",
-        type=int,
-        default=2,
-        help="The context size in the decoder. 1 means bigram; " "2 means tri-gram",
-    )
     parser.add_argument(
         "--max-sym-per-frame",
         type=int,
@@ -448,178 +429,30 @@ def decode_one_batch(
 
     hyps = []
 
-    if params.decoding_method == "fast_beam_search":
-        hyp_tokens = fast_beam_search_one_best(
-            model=model,
-            decoding_graph=decoding_graph,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam,
-            max_contexts=params.max_contexts,
-            max_states=params.max_states,
-        )
-        for hyp in sp.decode(hyp_tokens):
-            hyps.append(hyp.split())
-    elif params.decoding_method == "fast_beam_search_nbest_LG":
-        hyp_tokens = fast_beam_search_nbest_LG(
-            model=model,
-            decoding_graph=decoding_graph,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam,
-            max_contexts=params.max_contexts,
-            max_states=params.max_states,
-            num_paths=params.num_paths,
-            nbest_scale=params.nbest_scale,
-        )
-        for hyp in hyp_tokens:
-            hyps.append([word_table[i] for i in hyp])
-    elif params.decoding_method == "fast_beam_search_nbest":
-        hyp_tokens = fast_beam_search_nbest(
-            model=model,
-            decoding_graph=decoding_graph,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam,
-            max_contexts=params.max_contexts,
-            max_states=params.max_states,
-            num_paths=params.num_paths,
-            nbest_scale=params.nbest_scale,
-        )
-        for hyp in sp.decode(hyp_tokens):
-            hyps.append(hyp.split())
-    elif params.decoding_method == "fast_beam_search_nbest_oracle":
-        hyp_tokens = fast_beam_search_nbest_oracle(
-            model=model,
-            decoding_graph=decoding_graph,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam,
-            max_contexts=params.max_contexts,
-            max_states=params.max_states,
-            num_paths=params.num_paths,
-            ref_texts=sp.encode(supervisions["text"]),
-            nbest_scale=params.nbest_scale,
-        )
-        for hyp in sp.decode(hyp_tokens):
-            hyps.append(hyp.split())
-    elif params.decoding_method == "greedy_search" and params.max_sym_per_frame == 1:
-        hyp_tokens = greedy_search_batch(
-            model=model,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-        )
-        for hyp in sp.decode(hyp_tokens):
-            hyps.append(hyp.split())
-    elif params.decoding_method == "modified_beam_search":
-        hyp_tokens = modified_beam_search(
-            model=model,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam_size,
-            context_graph=context_graph,
-        )
-        for hyp in sp.decode(hyp_tokens):
-            hyps.append(hyp.split())
-    elif params.decoding_method == "modified_beam_search_lm_shallow_fusion":
-        hyp_tokens = modified_beam_search_lm_shallow_fusion(
-            model=model,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam_size,
-            LM=LM,
-        )
-        for hyp in sp.decode(hyp_tokens):
-            hyps.append(hyp.split())
-    elif params.decoding_method == "modified_beam_search_LODR":
-        hyp_tokens = modified_beam_search_LODR(
-            model=model,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam_size,
-            LODR_lm=ngram_lm,
-            LODR_lm_scale=ngram_lm_scale,
-            LM=LM,
-            context_graph=context_graph,
-        )
-        for hyp in sp.decode(hyp_tokens):
-            hyps.append(hyp.split())
-    elif params.decoding_method == "modified_beam_search_lm_rescore":
-        lm_scale_list = [0.01 * i for i in range(10, 50)]
-        ans_dict = modified_beam_search_lm_rescore(
-            model=model,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam_size,
-            LM=LM,
-            lm_scale_list=lm_scale_list,
-        )
-    elif params.decoding_method == "modified_beam_search_lm_rescore_LODR":
-        lm_scale_list = [0.02 * i for i in range(2, 30)]
-        ans_dict = modified_beam_search_lm_rescore_LODR(
-            model=model,
-            encoder_out=encoder_out,
-            encoder_out_lens=encoder_out_lens,
-            beam=params.beam_size,
-            LM=LM,
-            LODR_lm=ngram_lm,
-            sp=sp,
-            lm_scale_list=lm_scale_list,
-        )
-    else:
-        batch_size = encoder_out.size(0)
+    batch_size = encoder_out.size(0)
 
-        for i in range(batch_size):
-            # fmt: off
-            encoder_out_i = encoder_out[i:i+1, :encoder_out_lens[i]]
-            # fmt: on
-            if params.decoding_method == "greedy_search":
-                hyp = greedy_search(
-                    model=model,
-                    encoder_out=encoder_out_i,
-                    max_sym_per_frame=params.max_sym_per_frame,
-                )
-            elif params.decoding_method == "beam_search":
-                hyp = beam_search(
-                    model=model,
-                    encoder_out=encoder_out_i,
-                    beam=params.beam_size,
-                )
-            else:
-                raise ValueError(
-                    f"Unsupported decoding method: {params.decoding_method}"
-                )
-            hyps.append(sp.decode(hyp).split())
+    for i in range(batch_size):
+        # fmt: off
+        encoder_out_i = encoder_out[i:i+1, :encoder_out_lens[i]]
+        # fmt: on
+        if params.decoding_method == "greedy_search":
+            hyp = greedy_search(
+                model=model,
+                encoder_out=encoder_out_i,
+                max_sym_per_frame=params.max_sym_per_frame,
+            )
+        elif params.decoding_method == "beam_search":
+            hyp = beam_search(
+                model=model,
+                encoder_out=encoder_out_i,
+                beam=params.beam_size,
+            )
+        else:
+            raise ValueError(f"Unsupported decoding method: {params.decoding_method}")
+        hyps.append(sp.decode(hyp).split())
 
     if params.decoding_method == "greedy_search":
         return {"greedy_search": hyps}
-    elif "fast_beam_search" in params.decoding_method:
-        key = f"beam_{params.beam}_"
-        key += f"max_contexts_{params.max_contexts}_"
-        key += f"max_states_{params.max_states}"
-        if "nbest" in params.decoding_method:
-            key += f"_num_paths_{params.num_paths}_"
-            key += f"nbest_scale_{params.nbest_scale}"
-            if "LG" in params.decoding_method:
-                key += f"_ngram_lm_scale_{params.ngram_lm_scale}"
-
-        return {key: hyps}
-    elif "modified_beam_search" in params.decoding_method:
-        prefix = f"beam_size_{params.beam_size}"
-        if params.decoding_method in (
-            "modified_beam_search_lm_rescore",
-            "modified_beam_search_lm_rescore_LODR",
-        ):
-            ans = dict()
-            assert ans_dict is not None
-            for key, hyps in ans_dict.items():
-                hyps = [sp.decode(hyp).split() for hyp in hyps]
-                ans[f"{prefix}_{key}"] = hyps
-            return ans
-        else:
-            if params.has_contexts:
-                prefix += f"-context-score-{params.context_score}"
-            return {prefix: hyps}
     else:
         return {f"beam_size_{params.beam_size}": hyps}
 
@@ -816,7 +649,6 @@ def main():
             if params.has_contexts:
                 params.suffix += f"-context-score-{params.context_score}"
     else:
-        params.suffix += f"-context-{params.context_size}"
         params.suffix += f"-max-sym-per-frame-{params.max_sym_per_frame}"
 
     if params.use_shallow_fusion:
