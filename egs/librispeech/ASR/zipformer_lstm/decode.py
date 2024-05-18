@@ -382,7 +382,6 @@ def decode_one_batch(
             hyp = greedy_search(
                 model=model,
                 encoder_out=encoder_out_i,
-                max_sym_per_frame=params.max_sym_per_frame,
             )
         elif params.decoding_method == "beam_search":
             hyp = beam_search(
