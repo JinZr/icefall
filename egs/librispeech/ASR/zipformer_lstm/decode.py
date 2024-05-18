@@ -34,63 +34,6 @@ Usage:
     --max-duration 600 \
     --decoding-method beam_search \
     --beam-size 4
-
-(3) modified beam search
-./zipformer_lstm/decode.py \
-    --epoch 28 \
-    --avg 15 \
-    --exp-dir ./zipformer_lstm/exp \
-    --max-duration 600 \
-    --decoding-method modified_beam_search \
-    --beam-size 4
-
-(4) fast beam search (one best)
-./zipformer_lstm/decode.py \
-    --epoch 28 \
-    --avg 15 \
-    --exp-dir ./zipformer_lstm/exp \
-    --max-duration 600 \
-    --decoding-method fast_beam_search \
-    --beam 20.0 \
-    --max-contexts 8 \
-    --max-states 64
-
-(5) fast beam search (nbest)
-./zipformer_lstm/decode.py \
-    --epoch 28 \
-    --avg 15 \
-    --exp-dir ./zipformer_lstm/exp \
-    --max-duration 600 \
-    --decoding-method fast_beam_search_nbest \
-    --beam 20.0 \
-    --max-contexts 8 \
-    --max-states 64 \
-    --num-paths 200 \
-    --nbest-scale 0.5
-
-(6) fast beam search (nbest oracle WER)
-./zipformer_lstm/decode.py \
-    --epoch 28 \
-    --avg 15 \
-    --exp-dir ./zipformer_lstm/exp \
-    --max-duration 600 \
-    --decoding-method fast_beam_search_nbest_oracle \
-    --beam 20.0 \
-    --max-contexts 8 \
-    --max-states 64 \
-    --num-paths 200 \
-    --nbest-scale 0.5
-
-(7) fast beam search (with LG)
-./zipformer_lstm/decode.py \
-    --epoch 28 \
-    --avg 15 \
-    --exp-dir ./zipformer_lstm/exp \
-    --max-duration 600 \
-    --decoding-method fast_beam_search_nbest_LG \
-    --beam 20.0 \
-    --max-contexts 8 \
-    --max-states 64
 """
 
 
@@ -599,15 +542,6 @@ def main():
     assert params.decoding_method in (
         "greedy_search",
         "beam_search",
-        "fast_beam_search",
-        "fast_beam_search_nbest",
-        "fast_beam_search_nbest_LG",
-        "fast_beam_search_nbest_oracle",
-        "modified_beam_search",
-        "modified_beam_search_LODR",
-        "modified_beam_search_lm_shallow_fusion",
-        "modified_beam_search_lm_rescore",
-        "modified_beam_search_lm_rescore_LODR",
     )
     params.res_dir = params.exp_dir / params.decoding_method
 
