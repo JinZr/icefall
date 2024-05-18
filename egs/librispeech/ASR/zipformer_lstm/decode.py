@@ -145,15 +145,29 @@ def get_parser():
         help="""Possible values are:
           - greedy_search
           - beam_search
-          - modified_beam_search
-          - modified_beam_search_LODR
-          - fast_beam_search
-          - fast_beam_search_nbest
-          - fast_beam_search_nbest_oracle
-          - fast_beam_search_nbest_LG
-        If you use fast_beam_search_nbest_LG, you have to specify
-        `--lang-dir`, which should contain `LG.pt`.
         """,
+    )
+
+    # NOTE: decoder params
+    parser.add_argument(
+        "--num-decoder-layers",
+        type=int,
+        default=4,
+        help="Number of decoder layer of the LSTM decoder.",
+    )
+
+    parser.add_argument(
+        "--decoder-embedding-dim",
+        type=int,
+        default=1024,
+        help="The embedding dimension of the LSTM decoder.",
+    )
+
+    parser.add_argument(
+        "--decoder-hidden-dim",
+        type=int,
+        default=512,
+        help="The hidden dimension of the LSTM decoder.",
     )
 
     parser.add_argument(
@@ -564,16 +578,7 @@ def main():
         params.suffix += f"-chunk-{params.chunk_size}"
         params.suffix += f"-left-context-{params.left_context_frames}"
 
-    if "fast_beam_search" in params.decoding_method:
-        params.suffix += f"-beam-{params.beam}"
-        params.suffix += f"-max-contexts-{params.max_contexts}"
-        params.suffix += f"-max-states-{params.max_states}"
-        if "nbest" in params.decoding_method:
-            params.suffix += f"-nbest-scale-{params.nbest_scale}"
-            params.suffix += f"-num-paths-{params.num_paths}"
-            if "LG" in params.decoding_method:
-                params.suffix += f"-ngram-lm-scale-{params.ngram_lm_scale}"
-    elif "beam_search" in params.decoding_method:
+    if "beam_search" in params.decoding_method:
         params.suffix += f"-{params.decoding_method}-beam-size-{params.beam_size}"
         if params.decoding_method in (
             "modified_beam_search",

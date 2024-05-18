@@ -357,7 +357,7 @@ def get_parser():
         "schedules inside the model",
     )
 
-    # decoder params
+    # NOTE: decoder params
     parser.add_argument(
         "--num-decoder-layers",
         type=int,
