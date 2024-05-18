@@ -357,11 +357,26 @@ def get_parser():
         "schedules inside the model",
     )
 
+    # decoder params
     parser.add_argument(
-        "--context-size",
+        "--num-decoder-layers",
         type=int,
-        default=2,
-        help="The context size in the decoder. 1 means bigram; " "2 means tri-gram",
+        default=4,
+        help="Number of decoder layer of the LSTM decoder.",
+    )
+
+    parser.add_argument(
+        "--decoder-embedding-dim",
+        type=int,
+        default=1024,
+        help="The embedding dimension of the LSTM decoder.",
+    )
+
+    parser.add_argument(
+        "--decoder-hidden-dim",
+        type=int,
+        default=512,
+        help="The hidden dimension of the LSTM decoder.",
     )
 
     parser.add_argument(
@@ -512,10 +527,6 @@ def get_params() -> AttributeDict:
 
         - subsampling_factor:  The subsampling factor for the model.
 
-        - encoder_dim: Hidden dim for multi-head attention model.
-
-        - num_decoder_layers: Number of decoder layer of transformer decoder.
-
         - warm_step: The warmup period that dictates the decay of the
               scale on "simple" (un-pruned) loss.
     """
@@ -534,10 +545,6 @@ def get_params() -> AttributeDict:
             "subsampling_factor": 4,  # not passed in, this is fixed.
             "warm_step": 2000,
             "env_info": get_env_info(),
-            # decoder params
-            "decoder_embedding_dim": 1024,
-            "num_decoder_layers": 4,
-            "decoder_hidden_dim": 512,
         }
     )
 
