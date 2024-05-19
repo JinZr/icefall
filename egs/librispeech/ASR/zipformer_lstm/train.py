@@ -359,6 +359,14 @@ def get_parser():
 
     # NOTE: decoder params
     parser.add_argument(
+        "--lstm-type",
+        type=str,
+        default="lstm",
+        choices=["lstm", "slstm", "mlstm"],
+        help="Implementation of LSTM in the decoder.",
+    )
+
+    parser.add_argument(
         "--num-decoder-layers",
         type=int,
         default=4,
