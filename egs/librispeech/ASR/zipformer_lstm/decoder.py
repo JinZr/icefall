@@ -70,6 +70,7 @@ class Decoder(nn.Module):
             "slstm",
             "mlstm",
         ], f"Unsupported lstm_type: {lstm_type}"
+        self.lstm_type = lstm_type
 
         self.embedding = nn.Embedding(
             num_embeddings=vocab_size,
