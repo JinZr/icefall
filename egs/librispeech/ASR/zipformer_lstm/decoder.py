@@ -44,6 +44,7 @@ class Decoder(nn.Module):
         hidden_dim: int,
         embedding_dropout: float = 0.0,
         rnn_dropout: float = 0.0,
+        lstm_type: str = "lstm",
     ):
         """
         Args:
@@ -63,6 +64,12 @@ class Decoder(nn.Module):
             Dropout for LSTM layers.
         """
         super().__init__()
+
+        assert lstm_type in [
+            "lstm",
+            "slstm",
+            "mlstm",
+        ], f"Unsupported lstm_type: {lstm_type}"
 
         self.embedding = nn.Embedding(
             num_embeddings=vocab_size,
@@ -86,14 +93,35 @@ class Decoder(nn.Module):
         self.vocab_size = vocab_size
 
         self.embedding_dropout = nn.Dropout(embedding_dropout)
-        # TODO(fangjun): Use layer normalized LSTM
-        self.rnn = nn.LSTM(
-            input_size=embedding_dim,
-            hidden_size=hidden_dim,
-            num_layers=num_layers,
-            batch_first=True,
-            dropout=rnn_dropout,
-        )
+
+        if lstm_type == "lstm":
+            self.rnn = nn.LSTM(
+                input_size=embedding_dim,
+                hidden_size=hidden_dim,
+                num_layers=num_layers,
+                batch_first=True,
+                dropout=rnn_dropout,
+            )
+        elif lstm_type == "slstm":
+            from xlstm import sLSTM
+
+            # NOTE: for sLSTM, batch_first is a default
+            self.rnn = sLSTM(
+                input_size=embedding_dim,
+                hidden_size=hidden_dim,
+                num_layers=num_layers,
+                dropout=rnn_dropout,
+            )
+        elif lstm_type == "mlstm":
+            from xlstm import mLSTM
+
+            # NOTE: for mLSTM, batch_first is a default
+            self.rnn = mLSTM(
+                input_size=embedding_dim,
+                hidden_size=hidden_dim,
+                num_layers=num_layers,
+                dropout=rnn_dropout,
+            )
 
         self.balancer2 = Balancer(
             hidden_dim,
