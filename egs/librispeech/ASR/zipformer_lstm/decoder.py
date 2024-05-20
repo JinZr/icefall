@@ -167,9 +167,15 @@ class Decoder(nn.Module):
 
         embedding_out = self.balancer(embedding_out)
 
-        rnn_out, (h, c) = self.rnn(embedding_out, states)
+        if self.lstm_type == "lstm":
+            rnn_out, (h, c) = self.rnn(embedding_out, states)
+        else:
+            rnn_out, h_c = self.rnn(embedding_out, states)
+
         rnn_out = F.relu(rnn_out)
         rnn_out = self.balancer2(rnn_out)
-        # print(rnn_out.shape)
 
-        return rnn_out, (h, c)
+        if self.lstm_type == "lstm":
+            return rnn_out, (h, c)
+        else:
+            return rnn_out, h_c
