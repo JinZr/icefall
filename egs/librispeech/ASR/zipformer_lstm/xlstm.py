@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from scaling import BiasNorm
 
 
 class CausalConv1D(nn.Module):
@@ -63,7 +64,8 @@ class sLSTMBlock(nn.Module):
         assert hidden_size % num_heads == 0
         assert proj_factor > 0
 
-        self.layer_norm = nn.LayerNorm(input_size)
+        # self.layer_norm = nn.LayerNorm(input_size)
+        self.bias_norm = BiasNorm(input_size)
         self.causal_conv = CausalConv1D(1, 1, 4)
 
         self.Wz = BlockDiagonal(input_size, hidden_size, num_heads)
@@ -85,7 +87,7 @@ class sLSTMBlock(nn.Module):
     def forward(self, x, prev_state):
         assert x.size(-1) == self.input_size
         h_prev, c_prev, n_prev, m_prev = prev_state
-        x_norm = self.layer_norm(x)
+        x_norm = self.bias_norm(x)
         x_conv = F.silu(self.causal_conv(x_norm.unsqueeze(1)).squeeze(1))
 
         z = torch.tanh(self.Wz(x) + self.Rz(h_prev))
@@ -186,7 +188,8 @@ class mLSTMBlock(nn.Module):
         assert hidden_size % num_heads == 0
         assert proj_factor > 0
 
-        self.layer_norm = nn.LayerNorm(input_size)
+        # self.layer_norm = nn.LayerNorm(input_size)
+        self.bias_norm = BiasNorm(input_size)
         self.up_proj_left = nn.Linear(input_size, int(input_size * proj_factor))
         self.up_proj_right = nn.Linear(input_size, hidden_size)
         self.down_proj = nn.Linear(hidden_size, input_size)
@@ -206,7 +209,7 @@ class mLSTMBlock(nn.Module):
     def forward(self, x, prev_state):
         h_prev, c_prev, n_prev, m_prev = prev_state
         assert x.size(-1) == self.input_size
-        x_norm = self.layer_norm(x)
+        x_norm = self.bias_norm(x)
         x_up_left = self.up_proj_left(x_norm)
         x_up_right = self.up_proj_right(x_norm)
 
