@@ -127,13 +127,11 @@ class Decoder(nn.Module):
         elif lstm_type == "xlstm":
             from xlstm import xLSTM
 
-            # NOTE: for xLSTM, batch_first is a default
             self.rnn = xLSTM(
                 input_size=embedding_dim,
                 hidden_size=hidden_dim,
                 num_heads=4,
                 layers=["m", "s", "m"],
-                dropout=rnn_dropout,
                 batch_first=True,
             )
 
