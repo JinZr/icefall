@@ -362,7 +362,7 @@ def get_parser():
         "--lstm-type",
         type=str,
         default="lstm",
-        choices=["lstm", "slstm", "mlstm"],
+        choices=["lstm", "slstm", "mlstm", "xlstm"],
         help="Implementation of LSTM in the decoder.",
     )
 
