@@ -104,26 +104,26 @@ class Decoder(nn.Module):
                 batch_first=True,
                 dropout=rnn_dropout,
             )
-        # elif lstm_type == "slstm":
-        #     from xlstm import sLSTM
+        elif lstm_type == "slstm":
+            from _xlstm import sLSTM
 
-        #     # NOTE: for sLSTM, batch_first is a default
-        #     self.rnn = sLSTM(
-        #         input_size=embedding_dim,
-        #         hidden_size=hidden_dim,
-        #         num_layers=num_layers,
-        #         dropout=rnn_dropout,
-        #     )
-        # elif lstm_type == "mlstm":
-        #     from xlstm import mLSTM
+            # NOTE: for sLSTM, batch_first is a default
+            self.rnn = sLSTM(
+                input_size=embedding_dim,
+                hidden_size=hidden_dim,
+                num_layers=num_layers,
+                dropout=rnn_dropout,
+            )
+        elif lstm_type == "mlstm":
+            from _xlstm import mLSTM
 
-        #     # NOTE: for mLSTM, batch_first is a default
-        #     self.rnn = mLSTM(
-        #         input_size=embedding_dim,
-        #         hidden_size=hidden_dim,
-        #         num_layers=num_layers,
-        #         dropout=rnn_dropout,
-        #     )
+            # NOTE: for mLSTM, batch_first is a default
+            self.rnn = mLSTM(
+                input_size=embedding_dim,
+                hidden_size=hidden_dim,
+                num_layers=num_layers,
+                dropout=rnn_dropout,
+            )
         elif lstm_type == "xlstm":
             from xlstm import xLSTM
 
