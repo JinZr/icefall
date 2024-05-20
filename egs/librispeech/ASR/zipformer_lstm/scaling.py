@@ -462,7 +462,7 @@ class BiasNorm(torch.nn.Module):
         self.num_channels = num_channels
         self.channel_dim = channel_dim
         self.log_scale = nn.Parameter(torch.tensor(log_scale))
-        self.bias = nn.Parameter(torch.zeros(num_channels))
+        self.bias = nn.Parameter(torch.empty(num_channels).normal_(mean=0, std=1e-4))
 
         self.log_scale_min = log_scale_min
         self.log_scale_max = log_scale_max
@@ -1884,9 +1884,7 @@ def _test_activation_dropout_and_linear():
 
                 def isclose(a, b):
                     # return true if cosine similarity is > 0.9.
-                    return (a * b).sum() > 0.9 * (
-                        (a**2).sum() * (b**2).sum()
-                    ).sqrt()
+                    return (a * b).sum() > 0.9 * ((a**2).sum() * (b**2).sum()).sqrt()
 
                 # the SwooshL() implementation has a noisy gradient due to 1-byte
                 # storage of it.
