@@ -388,6 +388,20 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--decoder-embedding-dropout",
+        type=float,
+        default=0.2,
+        help="Dropout rate for the embedding layer in the LSTM decoder.",
+    )
+
+    parser.add_argument(
+        "--decoder-rnn-dropout",
+        type=float,
+        default=0.1,
+        help="Dropout rate for the LSTM layers in the LSTM decoder.",
+    )
+
+    parser.add_argument(
         "--prune-range",
         type=int,
         default=5,
@@ -610,6 +624,9 @@ def get_decoder_model(params: AttributeDict) -> nn.Module:
         embedding_dim=params.decoder_embedding_dim,
         num_layers=params.num_decoder_layers,
         hidden_dim=params.decoder_hidden_dim,
+        embedding_dropout=params.decoder_embedding_dropout,
+        rnn_dropout=params.decoder_rnn_dropout,
+        lstm_type=params.lstm_type,
     )
     return decoder
 
