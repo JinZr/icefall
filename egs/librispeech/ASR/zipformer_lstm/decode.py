@@ -179,6 +179,20 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--decoder-embedding-dropout",
+        type=float,
+        default=0.2,
+        help="Dropout rate for the embedding layer in the LSTM decoder.",
+    )
+
+    parser.add_argument(
+        "--decoder-rnn-dropout",
+        type=float,
+        default=0.1,
+        help="Dropout rate for the LSTM layers in the LSTM decoder.",
+    )
+
+    parser.add_argument(
         "--beam-size",
         type=int,
         default=4,
