@@ -359,7 +359,7 @@ class xLSTM(nn.Module):
             state = state.transpose(0, 1)
         else:
             state = torch.zeros(self.num_layers, 4, batch_size, self.hidden_size).to(
-                self.device
+                x.device
             )
 
         output = []
