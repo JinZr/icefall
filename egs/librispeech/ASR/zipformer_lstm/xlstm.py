@@ -358,7 +358,9 @@ class xLSTM(nn.Module):
             assert state_input_size == self.input_size
             state = state.transpose(0, 1)
         else:
-            state = torch.zeros(self.num_layers, 4, batch_size, self.hidden_size)
+            state = torch.zeros(self.num_layers, 4, batch_size, self.hidden_size).to(
+                self.device
+            )
 
         output = []
         for t in range(seq_len):
