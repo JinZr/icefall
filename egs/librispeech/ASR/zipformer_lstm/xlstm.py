@@ -204,7 +204,8 @@ class mLSTMBlock(nn.Module):
         self.Wf = nn.Linear(int(input_size * proj_factor), hidden_size)
         self.Wo = nn.Linear(int(input_size * proj_factor), hidden_size)
 
-        self.group_norm = nn.GroupNorm(num_heads, hidden_size)
+        # self.group_norm = nn.GroupNorm(num_heads, hidden_size)
+        self.bias_norm2 = BiasNorm(num_heads * hidden_size)
 
     def forward(self, x, prev_state):
         h_prev, c_prev, n_prev, m_prev = prev_state
@@ -235,7 +236,7 @@ class mLSTMBlock(nn.Module):
         )  # o * (c @ q) / max{|n.T @ q|, 1}
 
         output = h_t
-        output_norm = self.group_norm(output)
+        output_norm = self.bias_norm2(output)
         output = output_norm + x_skip
         output = output * F.silu(x_up_right)
         output = self.down_proj(output)
