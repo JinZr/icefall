@@ -91,7 +91,7 @@ def get_parser():
     )
 
     parser.add_argument(
-        "--chunk-size",
+        "--audio-chunk-size",
         type=int,
         default=15,
         help="The duration of each chunk (in second).",
@@ -134,7 +134,7 @@ def read_sound_files(
 
 
 def read_n_chunks(
-    wave: torch.Tensor, sample_rate: int, chunk_size: int
+    wave: torch.Tensor, sample_rate: int, audio_chunk_size: int
 ) -> List[torch.Tensor]:
     """Read a list of sound files into a list 1-D float32 torch tensors.
     Args:
@@ -142,7 +142,7 @@ def read_n_chunks(
         torch.Tensor
       sample_rate:
         The expected sample rate of the sound file.
-      chunk_size:
+      audio_chunk_size:
         The duration of each chunk (in second).
       nc:
         The number of batch-fy chunks.
@@ -151,7 +151,7 @@ def read_n_chunks(
     """
     ans = []
     wave_len = wave.size(1)
-    chunk_len = sample_rate * chunk_size
+    chunk_len = sample_rate * audio_chunk_size
     nc = wave_len // chunk_len
     for i in range(nc):
         chunk = wave[
@@ -216,12 +216,12 @@ def main():
     )
     wave_lens = [w.size(1) for w in waves]
 
-    chunk_size = params.chunk_size
-    logging.info(f"Chunk size: {chunk_size}")
+    audio_chunk_size = params.audio_chunk_size
+    logging.info(f"Chunk size: {audio_chunk_size}")
 
     logging.info("Decoding started")
     for wave_index, _ in enumerate(wave_lens):
-        chunks = read_n_chunks(waves[wave_index], params.sample_rate, chunk_size)
+        chunks = read_n_chunks(waves[wave_index], params.sample_rate, audio_chunk_size)
 
         for chunk_index in range(len(chunks), params.nc):
             features = fbank(chunks[chunk_index : chunk_index + params.nc])
