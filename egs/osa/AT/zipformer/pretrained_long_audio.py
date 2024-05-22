@@ -218,11 +218,13 @@ def main():
     logging.info(f"Chunk size: {audio_chunk_size}")
 
     logging.info("Decoding started")
+    wave_labels = []
     for wave_index, _ in enumerate(wave_lens):
         chunks = read_n_chunks(waves[wave_index], params.sample_rate, audio_chunk_size)
-
+        wave_label = []
         for chunk_index in range(0, len(chunks), params.nc):
             features = fbank(chunks[chunk_index : chunk_index + params.nc])
+            features = [f.to(device) for f in features]
             feature_lengths = [f.size(0) for f in features]
 
             features = pad_sequence(
@@ -238,13 +240,13 @@ def main():
 
             for filename, logit in zip(args.sound_files, logits):
                 topk_prob, topk_index = logit.sigmoid().topk(5)
-                topk_labels = [label_dict[index.item()] for index in topk_index]
-                logging.info(
-                    f"{filename}: Top 5 predicted labels are {topk_labels} with "
-                    f"probability of {topk_prob.tolist()}"
-                )
+                # topk_labels = [label_dict[index.item()] for index in topk_index]
+                topk_labels = [int(index.item() == 43) for index in topk_index]
+                wave_label += topk_labels
+        wave_labels.append(wave_label)
 
     logging.info("Done")
+    print(wave_labels)
 
 
 if __name__ == "__main__":
