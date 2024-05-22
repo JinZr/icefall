@@ -44,6 +44,7 @@ import argparse
 import csv
 import logging
 import math
+from itertools import groupby
 from typing import List
 
 import kaldifeat
@@ -93,14 +94,14 @@ def get_parser():
     parser.add_argument(
         "--audio-chunk-size",
         type=int,
-        default=15,
+        default=20,
         help="The duration of each chunk (in second).",
     )
 
     parser.add_argument(
         "--nc",
         type=int,
-        default=10,
+        default=20,
         help="The number of batch-fy chunks.",
     )
 
@@ -131,6 +132,16 @@ def read_sound_files(
         # We use only the first channel
         ans.append(wave[0].contiguous())
     return ans
+
+
+def merge_adjascent_chunks(arr: List[int]):
+    merged = []
+    for key, group in groupby(arr, lambda x: x):
+        if list(group)[0] == 1:
+            merged.append(1)
+        else:
+            merged += list(group)
+    return merged
 
 
 def read_n_chunks(
@@ -243,10 +254,11 @@ def main():
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
                 topk_labels = [int(index.item() == 43) for index in topk_index]
                 wave_label += topk_labels
-        wave_labels.append(wave_label)
+        wave_labels.append(merge_adjascent_chunks(wave_label))
 
     logging.info("Done")
     print(wave_labels)
+    print(f"``Snoring`` detected in {sum(wave_labels)} chunks")
 
 
 if __name__ == "__main__":
