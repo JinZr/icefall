@@ -221,7 +221,7 @@ def main():
     for wave_index, _ in enumerate(wave_lens):
         chunks = read_n_chunks(waves[wave_index], params.sample_rate, audio_chunk_size)
 
-        for chunk_index in range(len(chunks), params.nc):
+        for chunk_index in range(0, len(chunks), params.nc):
             features = fbank(chunks[chunk_index : chunk_index + params.nc])
             feature_lengths = [f.size(0) for f in features]
 
