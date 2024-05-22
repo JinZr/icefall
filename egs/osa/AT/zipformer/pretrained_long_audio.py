@@ -151,13 +151,11 @@ def read_n_chunks(
     """
     ans = []
     wave_len = wave.size(-1)
+    print(wave.size())
     chunk_len = sample_rate * audio_chunk_size
     nc = wave_len // chunk_len
     for i in range(nc):
-        chunk = wave[
-            :,
-            (i * chunk_len) : min((i + 1) * chunk_len, wave_len),
-        ]
+        chunk = wave[(i * chunk_len) : min((i + 1) * chunk_len, wave_len),]
         ans.append(chunk)
     return ans
 
