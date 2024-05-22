@@ -132,7 +132,7 @@ def read_sound_files(
         ), f"expected sample rate: {expected_sample_rate}. Given: {sample_rate}"
         # We use only the first channel
         ans.append(wave[0].contiguous())
-        dur.append(wave.size(0) / sample_rate / 60 / 60)
+        dur.append(wave.size(-1) / sample_rate / 60 / 60)
     return ans, dur
 
 
