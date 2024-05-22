@@ -45,7 +45,7 @@ import csv
 import logging
 import math
 from itertools import groupby
-from typing import List
+from typing import List, Tuple
 
 import kaldifeat
 import torch
@@ -112,7 +112,7 @@ def get_parser():
 
 def read_sound_files(
     filenames: List[str], expected_sample_rate: float
-) -> List[torch.Tensor]:
+) -> Tuple[List[torch.Tensor], List[float]]:
     """Read a list of sound files into a list 1-D float32 torch tensors.
     Args:
       filenames:
@@ -123,6 +123,7 @@ def read_sound_files(
       Return a list of 1-D float32 torch tensors.
     """
     ans = []
+    dur = []
     assert len(filenames) == 1, "Only one sound file is supported"
     for f in filenames:
         wave, sample_rate = torchaudio.load(f)
@@ -131,7 +132,8 @@ def read_sound_files(
         ), f"expected sample rate: {expected_sample_rate}. Given: {sample_rate}"
         # We use only the first channel
         ans.append(wave[0].contiguous())
-    return ans
+        dur.append(wave.size(0) / sample_rate / 60 / 60)
+    return ans, dur
 
 
 def merge_adjascent_chunks(arr: List[int]):
@@ -220,7 +222,7 @@ def main():
     fbank = kaldifeat.Fbank(opts)
 
     logging.info(f"Reading sound files: {params.sound_files}")
-    waves = read_sound_files(
+    waves, wave_durs = read_sound_files(
         filenames=params.sound_files, expected_sample_rate=params.sample_rate
     )
     wave_lens = [w.size(-1) for w in waves]
@@ -257,9 +259,12 @@ def main():
         wave_labels.append(merge_adjascent_chunks(wave_label))
 
     logging.info("Done")
-    for i, wave_label in enumerate(wave_labels):
+    for i, (wave_label, wave_dur) in enumerate(zip(wave_labels, wave_durs)):
         print(f"Wave {i}: {wave_label} \n")
         print(f"``Snoring`` detected in {sum(wave_label)} chunks")
+        print(f"Duration: {wave_dur} hours")
+        print("\n")
+        print(f"Estimated AHI index: {sum(wave_label) / wave_dur}")
 
 
 if __name__ == "__main__":
