@@ -10,5 +10,6 @@ for spkr in $(ls ${root_path}); do
         --feedforward-dim 512,768,768,768,768,768 \
         --encoder-dim 192,256,256,256,256,256 \
         --encoder-unmasked-dim 192,192,192,192,192,192 \
+        --audio-chunk-size 15 \
         /mnt/nfs_share/jinzr/dat/tongren-snoring-children/20240516/edf/${spkr}/${spkr}_16k.wav
 done
