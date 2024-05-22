@@ -256,7 +256,7 @@ def main():
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
                 topk_labels = [int(index.item() == 43) for index in topk_index]
                 wave_label += topk_labels
-        wave_labels.append(merge_adjascent_chunks(wave_label))
+        wave_labels.append(wave_label)
 
     logging.info("Done")
     for i, (wave_label, wave_dur) in enumerate(zip(wave_labels, wave_durs)):
