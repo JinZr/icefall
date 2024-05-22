@@ -257,8 +257,9 @@ def main():
         wave_labels.append(merge_adjascent_chunks(wave_label))
 
     logging.info("Done")
-    print(wave_labels)
-    print(f"``Snoring`` detected in {sum(wave_labels)} chunks")
+    for i, wave_label in enumerate(wave_labels):
+        print(f"Wave {i}: {wave_label} \n")
+        print(f"``Snoring`` detected in {sum(wave_label)} chunks")
 
 
 if __name__ == "__main__":
