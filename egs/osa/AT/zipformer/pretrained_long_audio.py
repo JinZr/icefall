@@ -150,7 +150,7 @@ def read_n_chunks(
       Return a list of 1-D float32 torch tensors.
     """
     ans = []
-    wave_len = wave.size(1)
+    wave_len = wave.size(-1)
     chunk_len = sample_rate * audio_chunk_size
     nc = wave_len // chunk_len
     for i in range(nc):
@@ -214,7 +214,7 @@ def main():
     waves = read_sound_files(
         filenames=params.sound_files, expected_sample_rate=params.sample_rate
     )
-    wave_lens = [w.size(1) for w in waves]
+    wave_lens = [w.size(-1) for w in waves]
 
     audio_chunk_size = params.audio_chunk_size
     logging.info(f"Chunk size: {audio_chunk_size}")
