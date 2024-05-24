@@ -17,8 +17,8 @@ if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
 
-    input_edf = Path(args.input_edf)
-    fname = input_edf.stem
+    input_edf = args.input_edf
+    fname = Path(input_edf).stem
 
     logging.basicConfig(level=logging.INFO)
 
