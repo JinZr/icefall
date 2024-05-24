@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 import soundfile
-from pyedflib.highlevel import read_edf
+from edf_utils import edf_contents
 
 
 def get_parser():
@@ -15,11 +15,6 @@ def get_parser():
         "--output-wav", type=str, required=True, help="Path to the wav file."
     )
     return parser
-
-
-def edf_contents(edf_file: Path):
-    signals, signal_headers, header = read_edf(edf_file)
-    return signals, signal_headers, header
 
 
 def get_audio(signal_headers, signals):
