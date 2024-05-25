@@ -58,6 +58,7 @@ from label_smoothing import LabelSmoothingLoss
 from lhotse.cut import Cut
 from lhotse.dataset.sampling.base import CutSampler
 from lhotse.utils import fix_random_seed
+from lora import replace_attn_layers
 from optim import Eden
 from torch import Tensor
 from torch.cuda.amp import GradScaler
@@ -235,6 +236,27 @@ def get_parser():
         type=str2bool,
         default=True,
         help="Whether to use half precision training.",
+    )
+
+    parser.add_argument(
+        "--lora",
+        type=str2bool,
+        default=False,
+        help="Whether to use LoRA.",
+    )
+
+    parser.add_argument(
+        "--lora-alpha",
+        type=int,
+        default=16,
+        help="The alpha parameter for LoRA.",
+    )
+
+    parser.add_argument(
+        "--lora-r",
+        type=int,
+        default=4,
+        help="The r parameter for LoRA.",
     )
 
     parser = deepspeed.add_config_arguments(parser)
@@ -462,70 +484,50 @@ def compute_loss(
 
     batch_idx_train = params.batch_idx_train
 
-    texts = batch["supervisions"]["text"]
-    prev_texts = [
-        cut.supervisions[0].custom["prev_text"] for cut in batch["supervisions"]["cut"]
+    texts = [
+        cut.supervisions[0].custom["transcription"]
+        for cut in batch["supervisions"]["cut"]
     ]
-
-    prev_text_tokens_list = []
-    for prev_text in prev_texts:
-        prev_text_tokens_list.append(
-            [tokenizer.sot_prev] + tokenizer.encode(prev_text) + [tokenizer.eot]
-        )
+    icl_texts = batch["supervisions"]["text"]
 
     text_tokens_list = []
-    output_text_token_list = []
-    for text in texts:
+    for text, icl_text in zip(texts, icl_texts):
         text_tokens_list.append(
-            # list(tokenizer.sot_sequence_including_notimestamps)
-            # + tokenizer.encode(text)
-            # + [tokenizer.eot]
-            [tokenizer.sot_lm]
-        )
-        output_text_token_list.append(
-            [tokenizer.sot_lm] + tokenizer.encode(text) + [tokenizer.eot]
+            tokenizer.encode(text)
+            + tokenizer.encode(" ")
+            + tokenizer.encode(icl_text)
+            + [tokenizer.eot]
         )
 
-    # convert it to torch tensor
-    prev_text_tokens_list = [
-        torch.LongTensor(text_tokens) for text_tokens in prev_text_tokens_list
-    ]
     text_tokens_list = [
         torch.LongTensor(text_tokens) for text_tokens in text_tokens_list
     ]
-    output_text_token_list = [
-        torch.LongTensor(text_tokens) for text_tokens in output_text_token_list
-    ]
 
     # 50256 is the index of <pad> for all whisper models
-    prev_outputs_tokens = _batch_tensors(
-        [tokens[:-1] for tokens in prev_text_tokens_list], pad_value=50256
-    )
     target_tokens = _batch_tensors(
         [tokens for tokens in text_tokens_list], pad_value=50256
     )
-    output_target_tokens = _batch_tensors(
-        [tokens[1:] for tokens in output_text_token_list], pad_value=50256
-    )
     target_lengths = torch.LongTensor(
-        [tokens.shape[0] - 1 for tokens in prev_text_tokens_list]
+        [tokens.shape[0] - 1 for tokens in text_tokens_list]
     )
 
     decoder_criterion = LabelSmoothingLoss(
         ignore_index=50256, label_smoothing=0.1, reduction="sum"
     )
+    decoder_criterion = torch.nn.NLLLoss(ignore_index=50256, reduction="sum")
 
     # ignore the first 3 tokens, which are always
     # <|lang_id|>, <|transcibe|>, <|notimestampes|>
     # for the icl task, we do not ignore any tokens
-    ignore_prefix_size = 1
+    # ignore_prefix_size = 3
     with torch.set_grad_enabled(is_training):
         encoder_out = model.encoder(feature)
-        text_logits = model.decoder(output_target_tokens.to(device), encoder_out)
-        text_logits = text_logits[:, ignore_prefix_size:, :]
-        target_tokens = target_tokens[:, ignore_prefix_size:]
-        output_target_tokens = output_target_tokens[:, ignore_prefix_size:]
-        loss = decoder_criterion(text_logits, output_target_tokens.to(device))
+        text_logits = model.decoder(target_tokens.to(device), encoder_out)
+        # text_logits = text_logits[:, ignore_prefix_size:, :]
+        # target_tokens = target_tokens[:, ignore_prefix_size:]
+        # output_target_tokens = output_target_tokens[:, ignore_prefix_size:]
+        # loss = decoder_criterion(text_logits, output_target_tokens.to(device))
+        loss = decoder_criterion(text_logits, target_tokens.to(device))
 
     assert loss.requires_grad == is_training
 
@@ -803,10 +805,12 @@ def run(rank, world_size, args):
     logging.info(f"Device: {device}")
     model.to(device)
 
-    logging.info("Freeze encoder")
-    for name, param in model.named_parameters():
-        if name.startswith("encoder."):
-            param.requires_grad = False
+    # logging.info("Freeze encoder")
+    # for name, param in model.named_parameters():
+    #     if name.startswith("encoder."):
+    #         param.requires_grad = False
+    logging.info(f"Applying LoRA with alpha={params.lora_alpha}, r={params.lora_r}")
+    replace_attn_layers(model, alpha=params.lora_alpha, r=params.lora_r)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=params.base_lr)
     scheduler = Eden(optimizer, params.lr_batches, params.lr_epochs)
