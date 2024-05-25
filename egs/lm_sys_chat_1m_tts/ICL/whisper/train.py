@@ -775,9 +775,9 @@ def run(rank, world_size, args):
 
     logging.info("About to create model")
 
-    replace_whisper_encoder_forward()
+    # replace_whisper_encoder_forward()
     model = whisper.load_model(params.model_name, "cpu")
-    del model.alignment_heads
+    # del model.alignment_heads
     num_param = sum([p.numel() for p in model.parameters()])
     logging.info(f"Number of model parameters: {num_param}")
 
