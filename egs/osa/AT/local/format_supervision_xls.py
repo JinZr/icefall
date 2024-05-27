@@ -1,7 +1,7 @@
 import argparse
 import logging
 from pathlib import Path
-from statistics import mean
+from statistics import mean, stdev
 
 from pandas import read_excel
 
@@ -85,6 +85,11 @@ if __name__ == "__main__":
             logging.info(
                 f"Average duration: {mean([row[2] for row in rows if row[-1] == event])}s"
             )
+            logging.info(
+                f"Standard deviation: {stdev([row[2] for row in rows if row[-1] == event])}s"
+            )
+            logging.info(f"Max: {max([row[2] for row in rows if row[-1] == event])}s")
+            logging.info(f"Min: {min([row[2] for row in rows if row[-1] == event])}s")
             logging.info(
                 f"Total duration: {sum([row[2] for row in rows if row[-1] == event])}s"
             )
