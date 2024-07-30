@@ -1,6 +1,6 @@
 # Introduction
 
-Please refer to <https://icefall.readthedocs.io/en/latest/recipes/Non-streaming-ASR/librispeech/index.html> for how to run models in this recipe.
+Please refer to <https://k2-fsa.github.io/icefall/recipes/Non-streaming-ASR/librispeech/index.html> for how to run models in this recipe.
 
 [./RESULTS.md](./RESULTS.md) contains the latest results.
 
@@ -50,7 +50,7 @@ We place an additional Conv1d layer right after the input embedding layer.
 | `conformer-ctc2`             | Reworked Conformer | Use auxiliary attention head |
 | `conformer-ctc3`             | Reworked Conformer | Streaming version + delay penalty |
 | `zipformer-ctc`              | Zipformer          | Use auxiliary attention head |
-| `zipformer`                  | Upgraded Zipformer | Use auxiliary transducer head | The latest recipe |
+| `zipformer`                  | Upgraded Zipformer | Use auxiliary transducer head / attention-decoder head | The latest recipe |
 
 # MMI
 

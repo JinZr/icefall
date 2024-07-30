@@ -137,7 +137,7 @@ class PiecewiseLinear(object):
 
           p: the other piecewise linear function
           include_crossings: if true, include in the x values positions
-              where the functions indicate by this and p crosss.
+              where the functions indicate by this and p cross.
         """
         assert isinstance(p, PiecewiseLinear), type(p)
 
@@ -462,7 +462,7 @@ class BiasNorm(torch.nn.Module):
         self.num_channels = num_channels
         self.channel_dim = channel_dim
         self.log_scale = nn.Parameter(torch.tensor(log_scale))
-        self.bias = nn.Parameter(torch.zeros(num_channels))
+        self.bias = nn.Parameter(torch.empty(num_channels).normal_(mean=0, std=1e-4))
 
         self.log_scale_min = log_scale_min
         self.log_scale_max = log_scale_max
@@ -636,8 +636,9 @@ class ChunkCausalDepthwiseConv1d(torch.nn.Module):
                 )
 
     def forward(self, x: Tensor, chunk_size: int = -1) -> Tensor:
-        """
-             Forward function.  Args:
+        """Forward function.
+
+        Args:
                x: a Tensor of shape (batch_size, channels, seq_len)
         chunk_size: the chunk size, in frames; does not have to divide seq_len exactly.
         """
@@ -1032,7 +1033,7 @@ class WhiteningPenaltyFunction(torch.autograd.Function):
                         w.prob = w.max_prob
                         metric.backward()
                         penalty_grad = x_detached.grad
-                        scale = w.grad_scale * (
+                        scale = float(w.grad_scale) * (
                             x_grad.to(torch.float32).norm()
                             / (penalty_grad.norm() + 1.0e-20)
                         )
@@ -1074,7 +1075,7 @@ class Whiten(nn.Module):
         super(Whiten, self).__init__()
         assert num_groups >= 1
         assert float(whitening_limit) >= 1
-        assert grad_scale >= 0
+        assert float(grad_scale) >= 0
         self.num_groups = num_groups
         self.whitening_limit = whitening_limit
         self.grad_scale = grad_scale
