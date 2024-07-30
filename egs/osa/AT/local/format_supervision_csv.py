@@ -100,9 +100,12 @@ if __name__ == "__main__":
             logging.info(
                 f"Average duration: {mean([float(row[-2]) for row in rows if row[-1] == event])}s"
             )
-            logging.info(
-                f"Standard deviation: {stdev([float(row[-2]) for row in rows if row[-1] == event])}s"
-            )
+            try:
+                logging.info(
+                    f"Standard deviation: {stdev([float(row[-2]) for row in rows if row[-1] == event])}s"
+                )
+            except:
+                logging.error("Standard deviation is not available.")
             logging.info(
                 f"Max: {max([float(row[-2]) for row in rows if row[-1] == event])}s"
             )

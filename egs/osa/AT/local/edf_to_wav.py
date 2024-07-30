@@ -33,6 +33,8 @@ if __name__ == "__main__":
     output_wav = Path(args.output_wav)
 
     signals, signal_headers, _ = edf_contents(input_edf)
+    print(signal_headers)
+    exit(9)
     audio_header, audio = get_audio(signal_headers, signals)
 
     assert audio_header["label"] == "Audio", "Audio channel not matched"
