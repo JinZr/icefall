@@ -1,0 +1,27 @@
+./hubert/finetune.py   \
+    --world-size 8   \
+    --num-epochs 222   \
+    --start-epoch 1   \
+    --full-libri 1 \
+    --use-fp16 1    \
+    --exp-dir hubert/large_exp_finetune_epoch291   \
+    --pretrained-dir pretrained/hubert_large_ll60k.pt  \
+    --max-duration 80  \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --accum-grad 1 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --mask-prob 0.50  \
+    --mask-channel-prob 0.25 \
+    --mask-channel-length 64  \
+    --encoder-layerdrop 0.1  \
+    --activation-dropout 0.1 \
+    --feature-grad-mult 1.0   \
+    --base-lr 0.001 \
+    --num-workers 2 

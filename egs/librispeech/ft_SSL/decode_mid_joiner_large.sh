@@ -1,0 +1,169 @@
+# avg=40
+# epoch=220
+CUDA_VISIBLE_DEVICES=0 ./hubert_mid_joiner/decode.py \
+    --epoch 24 \
+    --avg 21 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=1 ./hubert_mid_joiner/decode.py \
+    --epoch 24 \
+    --avg 22 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=2 ./hubert_mid_joiner/decode.py \
+    --epoch 26 \
+    --avg 22 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=3 ./hubert_mid_joiner/decode.py \
+    --epoch 28 \
+    --avg 25 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=4 ./hubert_mid_joiner/decode.py \
+    --epoch 29 \
+    --avg 26 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=5 ./hubert_mid_joiner/decode.py \
+    --epoch 30 \
+    --avg 27 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=6 ./hubert_mid_joiner/decode.py \
+    --epoch 31 \
+    --avg 27 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=7 ./hubert_mid_joiner/decode.py \
+    --epoch 31 \
+    --avg 28 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+./hubert_mid_joiner/decode.py \
+    --epoch 60 \
+    --avg 10 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --decoding-method modified_beam_search \
+    --beam-size 8 \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 &
+
+CUDA_VISIBLE_DEVICES=7 ./hubert_mid_joiner/decode.py \
+    --epoch 50 \
+    --avg 10 \
+    --exp-dir ./hubert_mid_joiner/large_exp_finetune_epoch291_stop_at_30_epoch/ \
+    --extractor-mode "layer_norm" \
+    --encoder-attention-heads 16 \
+    --untie-final-proj 1 \
+    --encoder-layers 24 \
+    --do-normalize 0   \
+    --final-dim 768   \
+    --encoder-embed-dim 1024 \
+    --encoder-ffn-embed-dim 4096 \
+    --layer-norm-first 1 \
+    --mid-encoder-dim 1024 
