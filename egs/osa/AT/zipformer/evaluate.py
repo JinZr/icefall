@@ -35,7 +35,7 @@ from typing import Dict
 
 import torch
 import torch.nn as nn
-from at_datamodule import AudioSetATDatamodule
+from at_datamodule import OsaAtDatamodule
 
 try:
     from sklearn.metrics import average_precision_score
@@ -175,7 +175,7 @@ def decode_dataset(
 @torch.no_grad()
 def main():
     parser = get_parser()
-    AudioSetATDatamodule.add_arguments(parser)
+    OsaAtDatamodule.add_arguments(parser)
     args = parser.parse_args()
     args.exp_dir = Path(args.exp_dir)
 
@@ -295,7 +295,7 @@ def main():
     logging.info(f"Number of model parameters: {num_param}")
 
     args.return_cuts = True
-    audioset = AudioSetATDatamodule(args)
+    audioset = OsaAtDatamodule(args)
 
     audioset_cuts = audioset.audioset_eval_cuts()
 

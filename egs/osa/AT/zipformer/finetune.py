@@ -41,7 +41,6 @@ from shutil import copyfile
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import optim
-import sentencepiece as spm
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
@@ -99,6 +98,35 @@ def set_batch_count(model: Union[nn.Module, DDP], batch_count: float) -> None:
             module.batch_count = batch_count
         if hasattr(module, "name"):
             module.name = name
+
+
+
+def add_finetune_arguments(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--do-finetune",
+        type=str2bool,
+        default=True,
+        help="If true, finetune from a pre-trained checkpoint",
+    )
+    parser.add_argument(
+        "--init-modules",
+        type=str,
+        default="encoder",
+        help="""
+        Modules to be initialized. It matches all parameters starting with
+        a specific key. The keys are given with Comma seperated. If None,
+        all modules will be initialised. For example, if you only want to
+        initialise all parameters staring with "encoder", use "encoder";
+        if you want to initialise parameters starting with encoder or decoder,
+        use "encoder,joiner".
+        """,
+    )
+    parser.add_argument(
+        "--finetune-ckpt",
+        type=str,
+        default=None,
+        help="Fine-tuning from which checkpoint (path to a .pt file)",
+    )
 
 
 def add_model_arguments(parser: argparse.ArgumentParser):
@@ -273,13 +301,13 @@ def get_parser():
     )
 
     parser.add_argument(
-        "--base-lr", type=float, default=0.045, help="The base learning rate."
+        "--base-lr", type=float, default=0.0045, help="The base learning rate."
     )
 
     parser.add_argument(
         "--lr-batches",
         type=float,
-        default=7500,
+        default=100000.0,
         help="""Number of steps that affects how rapidly the learning rate
         decreases. We suggest not to change this.""",
     )
@@ -287,7 +315,7 @@ def get_parser():
     parser.add_argument(
         "--lr-epochs",
         type=float,
-        default=3.5,
+        default=100.0,
         help="""Number of epochs that affects how rapidly the learning rate decreases.
         """,
     )
@@ -366,6 +394,7 @@ def get_parser():
     )
 
     add_model_arguments(parser)
+    add_finetune_arguments(parser)
 
     return parser
 
@@ -565,6 +594,54 @@ def load_checkpoint_if_available(
             params["start_epoch"] = saved_params["cur_epoch"]
 
     return saved_params
+
+
+def load_model_params(
+    ckpt: str, model: nn.Module, init_modules: List[str] = None, strict: bool = True
+):
+    """Load model params from checkpoint
+
+    Args:
+        ckpt (str): Path to the checkpoint
+        model (nn.Module): model to be loaded
+        init_modules (list[str]): List of modules to be initialized
+
+    """
+    logging.info(f"Loading checkpoint from {ckpt}")
+    checkpoint = torch.load(ckpt, map_location="cpu")
+
+    # if module list is empty, load the whole model from ckpt
+    if not init_modules:
+        if next(iter(checkpoint["model"])).startswith("module."):
+            logging.info("Loading checkpoint saved by DDP")
+
+            dst_state_dict = model.state_dict()
+            src_state_dict = checkpoint["model"]
+            for key in dst_state_dict.keys():
+                src_key = "{}.{}".format("module", key)
+                dst_state_dict[key] = src_state_dict.pop(src_key)
+            assert len(src_state_dict) == 0
+            model.load_state_dict(dst_state_dict, strict=strict)
+        else:
+            model.load_state_dict(checkpoint["model"], strict=strict)
+    else:
+        src_state_dict = checkpoint["model"]
+        dst_state_dict = model.state_dict()
+        for module in init_modules:
+            logging.info(f"Loading parameters starting with prefix {module}")
+            src_keys = [
+                k for k in src_state_dict.keys() if k.startswith(module.strip() + ".")
+            ]
+            dst_keys = [
+                k for k in dst_state_dict.keys() if k.startswith(module.strip() + ".")
+            ]
+            assert set(src_keys) == set(dst_keys)  # two sets should match exactly
+            for key in src_keys:
+                dst_state_dict[key] = src_state_dict.pop(key)
+
+        model.load_state_dict(dst_state_dict, strict=strict)
+
+    return None
 
 
 def save_checkpoint(
@@ -972,11 +1049,24 @@ def run(rank, world_size, args):
     if rank == 0:
         # model_avg is only used with rank 0
         model_avg = copy.deepcopy(model).to(torch.float64)
-
-    assert params.start_epoch > 0, params.start_epoch
-    checkpoints = load_checkpoint_if_available(
-        params=params, model=model, model_avg=model_avg
-    )
+    
+    # load model parameters for model fine-tuning
+    if params.do_finetune:
+        assert params.start_epoch == 1, "Fine-tune must start from epoch 1"
+        modules = params.init_modules.split(",") if params.init_modules else None
+        checkpoints = load_model_params(
+            ckpt=params.finetune_ckpt, model=model, init_modules=modules
+        )
+        # Need to update the model_avg if use initialisation
+        if rank == 0:
+            # model_avg is only used with rank 0
+            model_avg = copy.deepcopy(model).to(torch.float64)
+    else:
+        # resuming training
+        assert params.start_epoch > 1, params.start_epoch
+        checkpoints = load_checkpoint_if_available(
+            params=params, model=model, model_avg=model_avg
+        )
 
     model.to(device)
     if world_size > 1:

@@ -254,16 +254,16 @@ def main():
             logits = model.forward_audio_tagging(encoder_out, encoder_out_lens)
 
             for filename, logit in zip(args.sound_files, logits):
-                topk_prob, topk_index = logit.sigmoid().topk(5)
+                topk_prob, topk_index = logit.sigmoid().topk(3)
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
-                topk_labels = [int(index.item() == 43) for index in topk_index]
+                topk_labels = [int(index.item() in [1, 2]) for index in topk_index]
                 wave_label += topk_labels
         wave_labels.append(wave_label)
 
     logging.info("Done")
     for i, (wave_label, wave_dur) in enumerate(zip(wave_labels, wave_durs)):
         print(f"Wave {i}: {wave_label} \n")
-        print(f"``Snoring`` detected in {sum(wave_label)} chunks")
+        print(f"``OSA`` detected in {sum(wave_label)} chunks")
         print(f"Duration: {wave_dur} hours")
         print("\n")
         print(f"Estimated AHI index: {sum(wave_label) / wave_dur}")

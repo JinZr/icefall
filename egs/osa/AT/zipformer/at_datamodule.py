@@ -50,7 +50,7 @@ class _SeedWorkers:
         fix_random_seed(self.seed + worker_id)
 
 
-class AudioSetATDatamodule:
+class OsaAtDatamodule:
     """
     DataModule for k2 audio tagging (AT) experiments.
 
@@ -193,7 +193,7 @@ class AudioSetATDatamodule:
         group.add_argument(
             "--enable-musan",
             type=str2bool,
-            default=True,
+            default=False,
             help="When enabled, select noise from MUSAN and mix it"
             "with training dataset. ",
         )
@@ -391,30 +391,46 @@ class AudioSetATDatamodule:
             num_workers=self.args.num_workers,
         )
         return test_dl
-
+    
     @lru_cache()
-    def audioset_train_cuts(self) -> CutSet:
+    def osa_train_cuts(self) -> CutSet:
         logging.info("About to get the audioset training cuts.")
-        balanced_cuts = load_manifest_lazy(
-            self.args.manifest_dir / "cuts_audioset_balanced.jsonl.gz"
-        )
-        if self.args.audioset_subset == "full":
-            unbalanced_cuts = load_manifest_lazy(
-                self.args.manifest_dir / "cuts_audioset_unbalanced.jsonl.gz"
-            )
-            cuts = CutSet.mux(
-                balanced_cuts,
-                unbalanced_cuts,
-                weights=[20000, 2000000],
-                stop_early=True,
-            )
-        else:
-            cuts = balanced_cuts
+        cuts = load_manifest(
+            self.args.manifest_dir / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
+        ).subset(last=16290)
         return cuts
 
     @lru_cache()
-    def audioset_eval_cuts(self) -> CutSet:
-        logging.info("About to get audioset eval cuts")
-        return load_manifest_lazy(
-            self.args.manifest_dir / "cuts_audioset_eval.jsonl.gz"
-        )
+    def osa_eval_cuts(self) -> CutSet:
+        logging.info("About to get the audioset training cuts.")
+        cuts = load_manifest(
+            self.args.manifest_dir / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
+        ).subset(first=1000)
+        return cuts
+
+    # @lru_cache()
+    # def audioset_train_cuts(self) -> CutSet:
+    #     logging.info("About to get the audioset training cuts.")
+    #     balanced_cuts = load_manifest_lazy(
+    #         self.args.manifest_dir / "cuts_audioset_balanced.jsonl.gz"
+    #     )
+    #     if self.args.audioset_subset == "full":
+    #         unbalanced_cuts = load_manifest_lazy(
+    #             self.args.manifest_dir / "cuts_audioset_unbalanced.jsonl.gz"
+    #         )
+    #         cuts = CutSet.mux(
+    #             balanced_cuts,
+    #             unbalanced_cuts,
+    #             weights=[20000, 2000000],
+    #             stop_early=True,
+    #         )
+    #     else:
+    #         cuts = balanced_cuts
+    #     return cuts
+
+    # @lru_cache()
+    # def audioset_eval_cuts(self) -> CutSet:
+    #     logging.info("About to get audioset eval cuts")
+    #     return load_manifest_lazy(
+    #         self.args.manifest_dir / "cuts_audioset_eval.jsonl.gz"
+    #     )

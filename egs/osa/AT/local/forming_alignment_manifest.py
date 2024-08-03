@@ -59,7 +59,12 @@ if __name__ == "__main__":
             except:
                 start_time_stamp = local_time
             hour, minute, second = start_time_stamp.split(":")
-            start_time = Seconds(int(hour) * 3600 + int(minute) * 60 + int(second) + float(millisecond) / 1000)
+            start_time = Seconds(
+                int(hour) * 3600
+                + int(minute) * 60
+                + int(second)
+                + float(millisecond) / 1000
+            )
 
             duration = Seconds(float(duration))
             if float(duration) < 0.05:
