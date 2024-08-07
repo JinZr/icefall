@@ -1042,9 +1042,7 @@ def run(rank, world_size, args):
     else:
         sampler_state_dict = None
 
-    train_dl = osa.train_dataloaders(
-        train_cuts, sampler_state_dict=sampler_state_dict
-    )
+    train_dl = osa.train_dataloaders(train_cuts, sampler_state_dict=sampler_state_dict)
 
     valid_cuts = osa.osa_eval_cuts()
     valid_dl = osa.valid_dataloaders(valid_cuts)

@@ -40,6 +40,8 @@ if __name__ == "__main__":
         logging.info(f"Reading {sound_file}")
         wav, sampling_rate = soundfile.read(sound_file)
         src.extend(wav)
+
+    logging.info(f"Concatenating channels")
     src = np.average(src, axis=-1)
 
     logging.info(f"Saving concatenated waveform to {args.output_wav}")

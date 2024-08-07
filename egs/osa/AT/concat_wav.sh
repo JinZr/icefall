@@ -2,29 +2,29 @@
 
 root_path=/mnt/nfs_share/jinzr/dat/tongren-snoring-children/20240516/wav_edf/snoring/
 
-data_dir=${root_path}/A48700-1527-0222/
-python local/concat_wav.py \
-    --output-wav ${data_dir}/A48700-1527-0222.wav \
-    ${data_dir}/240222_1.wav \
-    ${data_dir}/240222_2.wav
+# data_dir=${root_path}/A48700-1527-0222/
+# python local/concat_wav.py \
+#     --output-wav ${data_dir}/A48700-1527-0222.wav \
+#     ${data_dir}/240222_1.wav \
+#     ${data_dir}/240222_2.wav
 
-sox ${data_dir}/A48700-1527-0222.wav -r 16000 ${data_dir}/A48700-1527-0222_16k.wav
+# sox ${data_dir}/A48700-1527-0222.wav -r 16000 ${data_dir}/A48700-1527-0222_16k.wav
 
-data_dir=${root_path}/A48782-1522-0302/
-python local/concat_wav.py \
-    --output-wav ${data_dir}/A48782-1522-0302.wav \
-    ${data_dir}/240302_1_1522.wav \
-    ${data_dir}/240302_2_1522.wav
+# data_dir=${root_path}/A48782-1522-0302/
+# python local/concat_wav.py \
+#     --output-wav ${data_dir}/A48782-1522-0302.wav \
+#     ${data_dir}/240302_1_1522.wav \
+#     ${data_dir}/240302_2_1522.wav
 
-sox ${data_dir}/A48782-1522-0302.wav -r 16000 ${data_dir}/A48782-1522-0302_16k.wav
+# sox ${data_dir}/A48782-1522-0302.wav -r 16000 ${data_dir}/A48782-1522-0302_16k.wav
 
-data_dir=${root_path}/A48809-1527-0306/
-python local/concat_wav.py \
-    --output-wav ${data_dir}/A48809-1527-0306.wav \
-    ${data_dir}/240306_1.wav \
-    ${data_dir}/240306_2.wav
+# data_dir=${root_path}/A48809-1527-0306/
+# python local/concat_wav.py \
+#     --output-wav ${data_dir}/A48809-1527-0306.wav \
+#     ${data_dir}/240306_1.wav \
+#     ${data_dir}/240306_2.wav
 
-sox ${data_dir}/A48809-1527-0306.wav -r 16000 ${data_dir}/A48809-1527-0306_16k.wav
+# sox ${data_dir}/A48809-1527-0306.wav -r 16000 ${data_dir}/A48809-1527-0306_16k.wav
 
 data_dir=${root_path}/A48837-1522-0309/
 python local/concat_wav.py \

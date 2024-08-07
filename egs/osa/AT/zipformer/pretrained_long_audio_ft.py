@@ -146,32 +146,69 @@ def merge_adjascent_chunks(arr: List[int]):
     return merged
 
 
+# def read_n_chunks(
+#     wave: torch.Tensor,
+#     sample_rate: int,
+#     audio_chunk_size: int,
+# ) -> List[torch.Tensor]:
+#     """Read a list of sound files into a list 1-D float32 torch tensors.
+#     Args:
+#       wave:
+#         torch.Tensor
+#       sample_rate:
+#         The expected sample rate of the sound file.
+#       audio_chunk_size:
+#         The duration of each chunk (in second).
+#       nc:
+#         The number of batch-fy chunks.
+#     Returns:
+#       Return a list of 1-D float32 torch tensors.
+#     """
+#     ans = []
+#     wave_len = wave.size(-1)
+#     print(wave.size())
+#     chunk_len = sample_rate * audio_chunk_size
+#     nc = wave_len // (chunk_len)
+#     for i in range(nc):
+#         chunk = wave[
+#             (i * chunk_len) : min((i + 1) * chunk_len, wave_len),
+#         ]
+#         ans.append(chunk)
+#     return ans
+
+
 def read_n_chunks(
-    wave: torch.Tensor, sample_rate: int, audio_chunk_size: int
+    wave: torch.Tensor,
+    sample_rate: int,
+    audio_chunk_size: int,
+    overlap: float,
 ) -> List[torch.Tensor]:
-    """Read a list of sound files into a list 1-D float32 torch tensors.
+    """Read a list of sound files into a list 1-D float32 torch tensors with overlap.
     Args:
       wave:
         torch.Tensor
       sample_rate:
         The expected sample rate of the sound file.
       audio_chunk_size:
-        The duration of each chunk (in second).
-      nc:
-        The number of batch-fy chunks.
+        The duration of each chunk (in seconds).
+      overlap:
+        The duration of overlap between consecutive chunks (in seconds).
     Returns:
       Return a list of 1-D float32 torch tensors.
     """
     ans = []
     wave_len = wave.size(-1)
-    print(wave.size())
     chunk_len = sample_rate * audio_chunk_size
-    nc = wave_len // chunk_len
+    overlap_len = sample_rate * overlap
+    step_size = chunk_len - overlap_len
+    nc = (wave_len - overlap_len) // step_size
+
     for i in range(nc):
-        chunk = wave[
-            (i * chunk_len) : min((i + 1) * chunk_len, wave_len),
-        ]
+        start = i * step_size
+        end = min(start + chunk_len, wave_len)
+        chunk = wave[start:end]
         ans.append(chunk)
+
     return ans
 
 
@@ -235,7 +272,12 @@ def main():
     logging.info("Decoding started")
     wave_labels = []
     for wave_index, _ in enumerate(wave_lens):
-        chunks = read_n_chunks(waves[wave_index], params.sample_rate, audio_chunk_size)
+        chunks = read_n_chunks(
+            waves[wave_index],
+            params.sample_rate,
+            audio_chunk_size,
+            audio_chunk_size - 1,
+        )
         wave_label = []
         for chunk_index in range(0, len(chunks), params.nc):
             features = fbank(chunks[chunk_index : chunk_index + params.nc])
@@ -252,13 +294,16 @@ def main():
                 features, feature_lengths
             )
             logits = model.forward_audio_tagging(encoder_out, encoder_out_lens)
-
-            for filename, logit in zip(args.sound_files, logits):
-                topk_prob, topk_index = logit.sigmoid().topk(3)
+            for logit in logits:
+                print(logits)
+                topk_prob, topk_index = logit.sigmoid().topk(1)
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
-                topk_labels = [int(index.item() in [1, 2]) for index in topk_index]
+                topk_labels = [
+                    int(index.item() in [1, 2, 4] and prob > 0.2)
+                    for index, prob in zip(topk_index, topk_prob)
+                ]
                 wave_label += topk_labels
-        wave_labels.append(wave_label)
+            wave_labels.append(wave_label)
 
     logging.info("Done")
     for i, (wave_label, wave_dur) in enumerate(zip(wave_labels, wave_durs)):

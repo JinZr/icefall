@@ -391,12 +391,13 @@ class OsaAtDatamodule:
             num_workers=self.args.num_workers,
         )
         return test_dl
-    
+
     @lru_cache()
     def osa_train_cuts(self) -> CutSet:
         logging.info("About to get the audioset training cuts.")
         cuts = load_manifest(
-            self.args.manifest_dir / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
+            self.args.manifest_dir
+            / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
         ).subset(last=16290)
         return cuts
 
@@ -404,7 +405,8 @@ class OsaAtDatamodule:
     def osa_eval_cuts(self) -> CutSet:
         logging.info("About to get the audioset training cuts.")
         cuts = load_manifest(
-            self.args.manifest_dir / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
+            self.args.manifest_dir
+            / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
         ).subset(first=1000)
         return cuts
 

@@ -100,7 +100,6 @@ def set_batch_count(model: Union[nn.Module, DDP], batch_count: float) -> None:
             module.name = name
 
 
-
 def add_finetune_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--do-finetune",
@@ -1049,7 +1048,7 @@ def run(rank, world_size, args):
     if rank == 0:
         # model_avg is only used with rank 0
         model_avg = copy.deepcopy(model).to(torch.float64)
-    
+
     # load model parameters for model fine-tuning
     if params.do_finetune:
         assert params.start_epoch == 1, "Fine-tune must start from epoch 1"
@@ -1132,9 +1131,7 @@ def run(rank, world_size, args):
     else:
         sampler_state_dict = None
 
-    train_dl = osa.train_dataloaders(
-        train_cuts, sampler_state_dict=sampler_state_dict
-    )
+    train_dl = osa.train_dataloaders(train_cuts, sampler_state_dict=sampler_state_dict)
 
     valid_cuts = osa.osa_eval_cuts()
     valid_dl = osa.valid_dataloaders(valid_cuts)

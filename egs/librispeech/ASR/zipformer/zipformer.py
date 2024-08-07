@@ -1609,7 +1609,11 @@ class RelPositionMultiheadAttentionWeights(nn.Module):
         k = x[..., query_dim : 2 * query_dim]
         # p is the position-encoding query
         p = x[..., 2 * query_dim :]
-        assert p.shape[-1] == num_heads * pos_head_dim, (p.shape[-1], num_heads, pos_head_dim)
+        assert p.shape[-1] == num_heads * pos_head_dim, (
+            p.shape[-1],
+            num_heads,
+            pos_head_dim,
+        )
 
         q = self.copy_query(q)  # for diagnostics only, does nothing.
         k = self.whiten_keys(self.balance_keys(k))  # does nothing in the forward pass.
