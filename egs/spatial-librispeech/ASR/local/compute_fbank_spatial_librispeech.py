@@ -69,7 +69,7 @@ def get_args():
     return parser.parse_args()
 
 
-def compute_fbank_librispeech(
+def compute_fbank_spatial_librispeech(
     average: Optional[bool] = None,
     dataset: Optional[str] = None,
     perturb_speed: Optional[bool] = True,
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     logging.basicConfig(format=formatter, level=logging.INFO)
     args = get_args()
     logging.info(vars(args))
-    compute_fbank_librispeech(
+    compute_fbank_spatial_librispeech(
         average=args.average,
         dataset=args.dataset,
         perturb_speed=args.perturb_speed,

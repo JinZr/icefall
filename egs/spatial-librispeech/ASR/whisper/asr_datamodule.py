@@ -397,12 +397,12 @@ class SpatialLibriSpeechAsrDataModule:
     def train_cuts(self) -> CutSet:
         logging.info("About to get train cuts")
         return load_manifest_lazy(
-            self.args.manifest_dir / "spatial-librispeech_cuts_train_avg.jsonl.gz"
+            self.args.manifest_dir / "spatial-librispeech_cuts_train.jsonl.gz"
         )
 
     @lru_cache()
     def test_cuts(self) -> CutSet:
         logging.info("About to get test cuts")
         return load_manifest_lazy(
-            self.args.manifest_dir / "spatial-librispeech_cuts_test_avg.jsonl.gz"
+            self.args.manifest_dir / "spatial-librispeech_cuts_test.jsonl.gz"
         )
