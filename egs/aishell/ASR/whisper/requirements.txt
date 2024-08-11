@@ -5,6 +5,4 @@ sentencepiece
 tensorboard
 librosa
 git+https://github.com/yuekaizhang/whisper.git
-zhconv
-WeTextProcessing
 deepspeed

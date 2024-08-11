@@ -74,7 +74,7 @@ def compute_fbank_librispeech(
     dataset: Optional[str] = None,
     perturb_speed: Optional[bool] = True,
 ):
-    src_dir = Path("data/manifests")
+    src_dir = Path("data/manifests") if not average else Path("data/manifests_avg")
     output_dir = Path("data/fbank") if not average else Path("data/fbank_avg")
     num_jobs = min(15, os.cpu_count())
     num_mel_bins = 80
@@ -85,7 +85,7 @@ def compute_fbank_librispeech(
         dataset_parts = dataset.split(" ", -1)
 
     prefix = "spatial-librispeech"
-    suffix = "jsonl.gz" if not average else "avg.jsonl.gz"
+    suffix = "jsonl.gz"
     manifests = read_manifests_if_cached(
         dataset_parts=dataset_parts,
         output_dir=src_dir,

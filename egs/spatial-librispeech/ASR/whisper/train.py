@@ -40,14 +40,12 @@ import argparse
 import copy
 import logging
 import os
-import random
 import warnings
 from pathlib import Path
 from shutil import copyfile
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import deepspeed
-import k2
 import optim
 import torch
 import torch.multiprocessing as mp
@@ -56,11 +54,10 @@ import whisper
 from asr_datamodule import SpatialLibriSpeechAsrDataModule
 from deepspeed.utils.zero_to_fp32 import convert_zero_checkpoint_to_fp32_state_dict
 from label_smoothing import LabelSmoothingLoss
-from lhotse import CutSet, load_manifest
 from lhotse.cut import Cut
 from lhotse.dataset.sampling.base import CutSampler
 from lhotse.utils import fix_random_seed
-from optim import Eden, ScaledAdam
+from optim import Eden
 from torch import Tensor
 from torch.cuda.amp import GradScaler
 from torch.nn.functional import pad as pad_tensor
@@ -758,7 +755,7 @@ def run(rank, world_size, args):
     tokenizer = whisper.tokenizer.get_tokenizer(
         model.is_multilingual,
         num_languages=model.num_languages,
-        language="zh",
+        language="en",
         task="transcribe",
     )
 
@@ -842,7 +839,7 @@ def run(rank, world_size, args):
     train_cuts = spatial_librispeech.train_cuts()
     train_cuts = train_cuts.filter(remove_short_and_long_utt)
     train_dl = spatial_librispeech.train_dataloaders(train_cuts)
-    valid_dl = spatial_librispeech.valid_dataloaders(spatial_librispeech.valid_cuts())
+    valid_dl = spatial_librispeech.valid_dataloaders(spatial_librispeech.test_cuts())
 
     scaler = GradScaler(enabled=params.use_fp16, init_scale=1.0)
     if checkpoints and "grad_scaler" in checkpoints:
