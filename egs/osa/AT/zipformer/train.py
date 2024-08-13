@@ -656,10 +656,10 @@ def compute_loss(
         n_classes=params.num_events,
         id_mapping={
             0: 0,
-            2: 0,
             3: 0,
             5: 0,
             1: 1,
+            2: 1,
             4: 1,
         },
     )

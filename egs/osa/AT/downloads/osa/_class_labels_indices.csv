@@ -1,0 +1,7 @@
+index,mid,display_name
+0,0,Normal
+1,1,Hypopnea_Event
+2,2,Obstructive_Sleep_Apnea_Event
+3,3,Central_Sleep_Apnea_Event
+4,4,Mixed_Hypopnea_Event
+5,5,Snoring_Event
