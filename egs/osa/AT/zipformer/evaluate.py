@@ -335,9 +335,9 @@ def main():
     # )
 
     # logging.info(f"mAP for audioset eval is: {mAP}")
-    acc = accuracy_score(labels, logits > 0.5)
-    f1 = f1_score(labels, logits > 0.5, average="micro")
-    recall = recall_score(labels, logits > 0.5, average="micro")
+    acc = accuracy_score(labels, logits > 0.6)
+    f1 = f1_score(labels, logits > 0.6, average="micro")
+    recall = recall_score(labels, logits > 0.6, average="micro")
 
     logging.info(f"Accuracy for OSA eval is: {acc}")
     logging.info(f"F1 for OSA eval is: {f1}")

@@ -181,7 +181,7 @@ def read_n_chunks(
     wave: torch.Tensor,
     sample_rate: int,
     audio_chunk_size: int,
-    overlap: float,
+    overlap: int = 0,
 ) -> List[torch.Tensor]:
     """Read a list of sound files into a list 1-D float32 torch tensors with overlap.
     Args:
@@ -210,6 +210,31 @@ def read_n_chunks(
         ans.append(chunk)
 
     return ans
+
+
+def merge_neighboring_ones(lst):
+    """Merges neighboring 1s in a list, leaving 0s untouched.
+
+    Args:
+      lst: The input list.
+
+    Returns:
+      A new list with merged neighboring 1s.
+    """
+
+    result = []
+    prev_val = None
+
+    for num in lst:
+        if num == 0:
+            result.append(num)
+            prev_val = num
+        else:
+            if prev_val != 1:
+                result.append(num)
+            prev_val = num
+
+    return result
 
 
 @torch.no_grad()
@@ -276,7 +301,7 @@ def main():
             waves[wave_index],
             params.sample_rate,
             audio_chunk_size,
-            audio_chunk_size - 1,
+            # audio_chunk_size,
         )
         wave_label = []
         for chunk_index in range(0, len(chunks), params.nc):
@@ -295,11 +320,10 @@ def main():
             )
             logits = model.forward_audio_tagging(encoder_out, encoder_out_lens)
             for logit in logits:
-                print(logits)
                 topk_prob, topk_index = logit.sigmoid().topk(1)
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
                 topk_labels = [
-                    int(index.item() in [1, 2, 4] and prob > 0.2)
+                    int(index.item() == 1 and prob > 0.7)
                     for index, prob in zip(topk_index, topk_prob)
                 ]
                 wave_label += topk_labels
@@ -307,11 +331,14 @@ def main():
 
     logging.info("Done")
     for i, (wave_label, wave_dur) in enumerate(zip(wave_labels, wave_durs)):
+        num_chunks = len(wave_label)
+        wave_label = merge_neighboring_ones(wave_label)
         print(f"Wave {i}: {wave_label} \n")
         print(f"``OSA`` detected in {sum(wave_label)} chunks")
+        print(f"Num chunks before merging: {num_chunks}")
         print(f"Duration: {wave_dur} hours")
         print("\n")
-        print(f"Estimated AHI index: {sum(wave_label) / wave_dur}")
+        print(f"Estimated AHI index: {sum(wave_label) / (10 * wave_dur)}")
 
 
 if __name__ == "__main__":
