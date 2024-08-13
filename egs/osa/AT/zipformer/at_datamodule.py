@@ -395,19 +395,17 @@ class OsaAtDatamodule:
     @lru_cache()
     def osa_train_cuts(self) -> CutSet:
         logging.info("About to get the audioset training cuts.")
-        cuts = load_manifest(
-            self.args.manifest_dir
-            / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
-        ).subset(last=16290)
+        cuts = load_manifest(self.args.manifest_dir / "train.jsonl.gz").subset(
+            last=16290
+        )
         return cuts
 
     @lru_cache()
     def osa_eval_cuts(self) -> CutSet:
         logging.info("About to get the audioset training cuts.")
-        cuts = load_manifest(
-            self.args.manifest_dir
-            / "osa_cuts_all_windows_fixed_filtered_empty_sup_at_style.jsonl.gz"
-        ).subset(first=1000)
+        cuts = load_manifest(self.args.manifest_dir / "test.jsonl.gz").subset(
+            first=1000
+        )
         return cuts
 
     # @lru_cache()
@@ -430,9 +428,7 @@ class OsaAtDatamodule:
     #         cuts = balanced_cuts
     #     return cuts
 
-    # @lru_cache()
-    # def audioset_eval_cuts(self) -> CutSet:
-    #     logging.info("About to get audioset eval cuts")
-    #     return load_manifest_lazy(
-    #         self.args.manifest_dir / "cuts_audioset_eval.jsonl.gz"
-    #     )
+    @lru_cache()
+    def osa_test_cuts(self) -> CutSet:
+        logging.info("About to get audioset eval cuts")
+        return load_manifest_lazy(self.args.manifest_dir / "test.jsonl.gz")

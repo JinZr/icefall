@@ -38,7 +38,12 @@ import torch.nn as nn
 from at_datamodule import OsaAtDatamodule
 
 try:
-    from sklearn.metrics import average_precision_score
+    from sklearn.metrics import (
+        accuracy_score,
+        average_precision_score,
+        f1_score,
+        recall_score,
+    )
 except Exception as ex:
     raise RuntimeError(f"{ex}\nPlease run\n" "pip3 install -U scikit-learn")
 from train import add_model_arguments, get_model, get_params, str2multihot
@@ -123,7 +128,18 @@ def inference_one_batch(
     supervisions = batch["supervisions"]
     audio_event = supervisions["audio_event"]
 
-    label, _ = str2multihot(audio_event)
+    label, _ = str2multihot(
+        audio_event,
+        n_classes=params.num_events,
+        id_mapping={
+            0: 0,
+            2: 0,
+            3: 0,
+            5: 0,
+            1: 1,
+            4: 1,
+        },
+    )
     label = label.detach().cpu()
 
     feature_lens = supervisions["num_frames"].to(device)
@@ -295,16 +311,16 @@ def main():
     logging.info(f"Number of model parameters: {num_param}")
 
     args.return_cuts = True
-    audioset = OsaAtDatamodule(args)
+    osa = OsaAtDatamodule(args)
 
-    audioset_cuts = audioset.audioset_eval_cuts()
+    osa_cuts = osa.osa_eval_cuts()
 
-    audioset_dl = audioset.valid_dataloaders(audioset_cuts)
+    osa_dl = osa.valid_dataloaders(osa_cuts)
 
-    test_sets = ["audioset_eval"]
+    test_sets = ["osa_eval"]
 
     logits, labels = decode_dataset(
-        dl=audioset_dl,
+        dl=osa_dl,
         params=params,
         model=model,
     )
@@ -313,12 +329,19 @@ def main():
     labels = torch.cat(labels, dim=0).long().detach().numpy()
 
     # compute the metric
-    mAP = average_precision_score(
-        y_true=labels,
-        y_score=logits,
-    )
+    # mAP = average_precision_score(
+    #     y_true=labels,
+    #     y_score=logits,
+    # )
 
-    logging.info(f"mAP for audioset eval is: {mAP}")
+    # logging.info(f"mAP for audioset eval is: {mAP}")
+    acc = accuracy_score(labels, logits > 0.5)
+    f1 = f1_score(labels, logits > 0.5, average="micro")
+    recall = recall_score(labels, logits > 0.5, average="micro")
+
+    logging.info(f"Accuracy for OSA eval is: {acc}")
+    logging.info(f"F1 for OSA eval is: {f1}")
+    logging.info(f"Recall for OSA eval is: {recall}")
 
     logging.info("Done")
 

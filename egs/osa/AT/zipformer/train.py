@@ -206,7 +206,7 @@ def add_model_arguments(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
-        "--num-events", type=int, default=6, help="Number of sound events"
+        "--num-events", type=int, default=2, help="Number of sound events"
     )
 
 
@@ -651,7 +651,18 @@ def compute_loss(
     events = supervisions[
         "audio_event"
     ]  # the label indices are in CED format (https://github.com/RicherMans/CED)
-    labels, _ = str2multihot(events, n_classes=params.num_events)
+    labels, _ = str2multihot(
+        events,
+        n_classes=params.num_events,
+        id_mapping={
+            0: 0,
+            2: 0,
+            3: 0,
+            5: 0,
+            1: 1,
+            4: 1,
+        },
+    )
     labels = labels.to(device)
 
     feature_lens = supervisions["num_frames"].to(device)
@@ -688,9 +699,15 @@ def str2multihot(events: List[str], n_classes=527, id_mapping=None):
     out = torch.zeros(batch_size, n_classes)
 
     for i, label in enumerate(labels):
+        # if id_mapping is not None:
+        #     label = [id_mapping[lb] for lb in label]
+        # out[i, label] = 1
         if id_mapping is not None:
             label = [id_mapping[lb] for lb in label]
-        out[i, label] = 1
+        if 1 in label:
+            out[i, 1] = 1
+        else:
+            out[i, 0] = 1
 
     return out, labels
 
