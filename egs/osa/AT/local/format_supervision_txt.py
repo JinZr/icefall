@@ -6,7 +6,7 @@ from statistics import mean, stdev
 
 from format_supervision_xls import append_relative_timestamp
 
-TARGET_EVENTS = ["低通气", "阻塞型呼吸暂停", "中枢型呼吸暂停", "混合型呼吸暂停"]
+TARGET_EVENTS = ["低通气", "阻塞型呼吸暂停", "中枢型呼吸暂停", "混合型呼吸暂停", "打鼾"]
 
 
 def get_parser():
@@ -30,11 +30,13 @@ def get_parser():
 
     return parser
 
+
 def read_time(date_file: str):
     with open(date_file) as fin:
         line = fin.readlines()
     assert len(line) == 1, line
     return datetime.datetime.strptime(line[0], "%Y-%m-%d %H:%M:%S")
+
 
 def get_rows(txt_file):
     with open(txt_file, "r", encoding="utf-16") as fin:
@@ -44,6 +46,7 @@ def get_rows(txt_file):
 
 def filter_rows(rows):
     return [row for row in rows if row[-1] in TARGET_EVENTS]
+
 
 def append_relative_timestamp(start_time, rows):
     return [
@@ -55,6 +58,7 @@ def append_relative_timestamp(start_time, rows):
         ]
         for row in rows
     ]
+
 
 def to_list(rows):
     res = []
@@ -70,6 +74,9 @@ def to_list(rows):
 
             if last_dt is not None:
                 if curr_dt < last_dt:
+                    curr_dt += datetime.timedelta(days=1)
+            else:
+                if curr_dt < datetime.datetime(1970, 1, 1, 12, 0, 0):
                     curr_dt += datetime.timedelta(days=1)
 
             try:
