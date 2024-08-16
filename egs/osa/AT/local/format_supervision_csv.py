@@ -20,6 +20,13 @@ def get_parser():
     parser.add_argument(
         "--output-csv", type=str, required=True, help="Path to the output csv file."
     )
+    parser.add_argument(
+        "--speaker-id",
+        type=str,
+        required=True,
+        help="Speaker ID",
+    )
+    parser.add_argument("--edf-date-dir", type=str, default="./edf_date")
 
     return parser
 
@@ -36,6 +43,11 @@ def get_rows(txt_file):
 def filter_rows(rows):
     return [row for row in rows if row[-1] in TARGET_EVENTS]
 
+def read_time(date_file: str):
+    with open(date_file) as fin:
+        line = fin.readlines()
+    assert len(line) == 1, line
+    return datetime.datetime.strptime(line[0], "%Y-%m-%d %H:%M:%S")
 
 def to_list(rows):
     res = []
@@ -47,7 +59,7 @@ def to_list(rows):
             # parsing the time
             hour, minute, second = split[2].split(":")
 
-            curr_dt = datetime.datetime(2024, 1, 1, int(hour), int(minute), int(second))
+            curr_dt = datetime.datetime(1970, 1, 1, int(hour), int(minute), int(second))
 
             if last_dt is not None:
                 if curr_dt < last_dt:
@@ -67,6 +79,16 @@ def to_list(rows):
     else:
         raise NotImplementedError
 
+def append_relative_timestamp(start_time, rows):
+    return [
+        [
+            row[0],  # Absolute timestamp
+            row[0] - start_time,  # Relative timestamp
+            round(float(row[1]), ndigits=2),  # Duration
+            row[2],  # Event
+        ]
+        for row in rows
+    ]
 
 if __name__ == "__main__":
     parser = get_parser()
@@ -76,13 +98,20 @@ if __name__ == "__main__":
 
     input_csv = Path(args.input_csv)
     output_csv = Path(args.output_csv)
+    speaker_id = args.speaker_id
+    edf_date_dir = Path(args.edf_date_dir)
 
+    assert edf_date_dir.exists(), f"{edf_date_dir} does not exist"
+    start_time_path = edf_date_dir / f"{speaker_id}.txt"
+    start_time = read_time(start_time_path)
+
+    # the header row has been removed in func:get_rows
     rows = get_rows(input_csv)
 
     rows = to_list(rows)
     rows = filter_rows(rows)
 
-    # rows = append_relative_timestamp(first_event, rows)
+    rows = append_relative_timestamp(start_time, rows)
 
     # Target CSV format:
     # Absolute timestamp, Relative timestamp, Duration, Event
@@ -98,20 +127,16 @@ if __name__ == "__main__":
         logging.info(f"Number: {len([row for row in rows if row[-1] == event])}")
         if len([row for row in rows if row[-1] == event]) > 0:
             logging.info(
-                f"Average duration: {mean([float(row[-2]) for row in rows if row[-1] == event])}s"
+                f"Average duration: {mean([row[2] for row in rows if row[-1] == event])}s"
             )
             try:
                 logging.info(
-                    f"Standard deviation: {stdev([float(row[-2]) for row in rows if row[-1] == event])}s"
+                    f"Standard deviation: {stdev([row[2] for row in rows if row[-1] == event])}s"
                 )
             except:
                 logging.error("Standard deviation is not available.")
+            logging.info(f"Max: {max([row[2] for row in rows if row[-1] == event])}s")
+            logging.info(f"Min: {min([row[2] for row in rows if row[-1] == event])}s")
             logging.info(
-                f"Max: {max([float(row[-2]) for row in rows if row[-1] == event])}s"
-            )
-            logging.info(
-                f"Min: {min([float(row[-2]) for row in rows if row[-1] == event])}s"
-            )
-            logging.info(
-                f"Total duration: {sum([float(row[-2]) for row in rows if row[-1] == event])}s"
+                f"Total duration: {sum([row[2] for row in rows if row[-1] == event])}s"
             )

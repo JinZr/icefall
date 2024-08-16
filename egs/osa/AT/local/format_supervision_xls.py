@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     logging.info(f"==> Info for {input_xls.name}:")
     logging.info(f"Number of rows: {len(rows)}")
-    logging.info(f"Total duration of sleep: {last_row[0] - first_row[0]}s")
+    logging.info(f"Total duration of sleep: {last_row[0] - start_time}s")
     for event in TARGET_EVENTS:
         logging.info(f"Name: {event}")
         logging.info(f"Number: {len([row for row in rows if row[-1] == event])}")

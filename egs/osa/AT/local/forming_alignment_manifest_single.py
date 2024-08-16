@@ -34,12 +34,6 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
-        "--start-time",
-        type=str,
-        help="Speaker ID",
-        required=True,
-    )
-    parser.add_argument(
         "--offset",
         type=int,
         required=True,
