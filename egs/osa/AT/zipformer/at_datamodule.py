@@ -205,6 +205,13 @@ class OsaAtDatamodule:
             help="AudioSamples or PrecomputedFeatures",
         )
 
+        group.add_argument(
+            "--use-recorder",
+            type=str2bool,
+            required=True,
+            help="Whether to use recorder data.",
+        )
+
     def train_dataloaders(
         self,
         cuts_train: CutSet,
@@ -394,7 +401,7 @@ class OsaAtDatamodule:
 
     @lru_cache()
     def osa_train_cuts(self) -> CutSet:
-        logging.info("About to get the audioset training cuts.")
+        logging.info("About to get the osa training cuts.")
         cuts = load_manifest(self.args.manifest_dir / "train.jsonl.gz").subset(
             last=16290
         )
@@ -402,8 +409,24 @@ class OsaAtDatamodule:
 
     @lru_cache()
     def osa_eval_cuts(self) -> CutSet:
-        logging.info("About to get the audioset training cuts.")
-        cuts = load_manifest(self.args.manifest_dir / "test.jsonl.gz").subset(
+        logging.info("About to get the osa eval cuts.")
+        cuts = load_manifest(self.args.manifest_dir / "train.jsonl.gz").subset(
+            first=1000
+        )
+        return cuts
+
+    @lru_cache()
+    def osa_recorder_train_cuts(self) -> CutSet:
+        logging.info("About to get the osa recorder training cuts.")
+        cuts = load_manifest(self.args.manifest_dir / "train_recorder.jsonl.gz").subset(
+            last=33000
+        )
+        return cuts
+
+    @lru_cache()
+    def osa_recorder_eval_cuts(self) -> CutSet:
+        logging.info("About to get the osa recorder eval cuts.")
+        cuts = load_manifest(self.args.manifest_dir / "train_recorder.jsonl.gz").subset(
             first=1000
         )
         return cuts
@@ -430,5 +453,11 @@ class OsaAtDatamodule:
 
     @lru_cache()
     def osa_test_cuts(self) -> CutSet:
-        logging.info("About to get audioset eval cuts")
+        logging.info("About to get osa test cuts")
         return load_manifest_lazy(self.args.manifest_dir / "test.jsonl.gz")
+
+    @lru_cache()
+    def osa_recorder_test_cuts(self) -> CutSet:
+        logging.info("About to get the osa recorder test cuts.")
+        cuts = load_manifest(self.args.manifest_dir / "test_recorder.jsonl.gz")
+        return cuts

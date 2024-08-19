@@ -7,11 +7,17 @@ from lhotse import Recording, RecordingSet, Seconds, SupervisionSegment, Supervi
 
 LABEL_MAPPING = {
     "正常": 0,
+    "觉醒": 0,
+    "觉醒1": 0,
     "低通气": 1,
-    "A. 阻塞性": 2,
-    "A. 中枢性": 3,
-    "A. 混合性": 4,
-    "单一打呼": 5,
+    "阻塞型呼吸暂停": 2,
+    "阻塞性呼吸暂停": 2,
+    "中枢型呼吸暂停": 3,
+    "中枢性呼吸暂停": 3,
+    "周期性呼吸": 3,
+    "混合型呼吸暂停": 4,
+    "混合性呼吸暂停": 3,
+    "打鼾": 5,
     "鼾声串": 5,
 }
 
@@ -49,7 +55,7 @@ if __name__ == "__main__":
 
     csv_path = Path(args.csv_path)
     audio_path = Path(args.audio_path)
-    offset = Seconds(args.offset)
+    offset = float(args.offset)
 
     speaker_id = csv_path.stem
 
@@ -73,14 +79,9 @@ if __name__ == "__main__":
         except:
             start_time_stamp = local_time
         hour, minute, second = start_time_stamp.split(":")
-        start_time = Seconds(
-            int(hour) * 3600
-            + int(minute) * 60
-            + int(second)
-            + float(millisecond) / 1000
-        )
+        start_time = int(hour) * 3600 + int(minute) * 60 + int(second)
 
-        duration = Seconds(float(duration))
+        duration = float(duration)
         if float(duration) < 0.05:
             continue
 
@@ -88,13 +89,14 @@ if __name__ == "__main__":
             continue
 
         if start_time < offset:
+            duration -= abs(offset - start_time)
+
             start_time = Seconds(0)
-            duration -= offset
         else:
             start_time -= offset
-            duration -= offset
 
-        duration = float(duration)
+        duration = Seconds(duration)
+        start_time = Seconds(start_time)
         language = "Sleep"
         channel = 0
         try:
@@ -121,5 +123,5 @@ if __name__ == "__main__":
 
     audio_set.to_jsonl(f"{args.output_dir}/osa_recordings_{speaker_id}.jsonl.gz")
     supervision_set.to_jsonl(
-        f"{args.output_dir}/osa_supervisions_{{speaker_id}}.jsonl.gz"
+        f"{args.output_dir}/osa_supervisions_{speaker_id}.jsonl.gz"
     )

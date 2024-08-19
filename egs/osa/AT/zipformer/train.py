@@ -1035,6 +1035,8 @@ def run(rank, world_size, args):
 
     osa = OsaAtDatamodule(args)
     train_cuts = osa.osa_train_cuts()
+    if params.use_recorder:
+        train_cuts += osa.osa_recorder_train_cuts()
 
     def remove_short_and_long_utt(c: Cut):
         # Keep only utterances with duration between 1 second and 20 seconds
@@ -1062,6 +1064,9 @@ def run(rank, world_size, args):
     train_dl = osa.train_dataloaders(train_cuts, sampler_state_dict=sampler_state_dict)
 
     valid_cuts = osa.osa_eval_cuts()
+    if params.use_recorder:
+        valid_cuts += osa.osa_recorder_eval_cuts()
+        
     valid_dl = osa.valid_dataloaders(valid_cuts)
 
     scaler = GradScaler(enabled=params.use_fp16, init_scale=1.0)

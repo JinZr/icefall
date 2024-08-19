@@ -6,7 +6,7 @@ from statistics import mean, stdev
 
 from format_supervision_xls import append_relative_timestamp
 
-TARGET_EVENTS = ["低通气", "阻塞性呼吸暂停", "中枢性呼吸暂停", "混合型呼吸暂停", "打鼾"]
+TARGET_EVENTS = ["低通气", "阻塞性呼吸暂停", "中枢性呼吸暂停", "混合型呼吸暂停", "打鼾", "周期性呼吸", "觉醒"]
 
 
 def get_parser():
@@ -48,7 +48,10 @@ def read_time(date_file: str):
     with open(date_file) as fin:
         line = fin.readlines()
     assert len(line) == 1, line
-    return datetime.datetime.strptime(line[0], "%Y-%m-%d %H:%M:%S")
+    try:
+        return datetime.datetime.strptime(line[0].strip(), "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return datetime.datetime.strptime(line[0].strip(), "%Y-%m-%d %H:%M:%S.%f")
 
 
 def to_list(rows):

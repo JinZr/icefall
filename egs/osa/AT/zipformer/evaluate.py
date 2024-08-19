@@ -313,9 +313,11 @@ def main():
     args.return_cuts = True
     osa = OsaAtDatamodule(args)
 
-    osa_cuts = osa.osa_eval_cuts()
+    osa_cuts = osa.osa_test_cuts()
+    if params.use_recorder:
+        osa_cuts += osa.osa_recorder_test_cuts()
 
-    osa_dl = osa.valid_dataloaders(osa_cuts)
+    osa_dl = osa.test_dataloaders(osa_cuts)
 
     test_sets = ["osa_eval"]
 

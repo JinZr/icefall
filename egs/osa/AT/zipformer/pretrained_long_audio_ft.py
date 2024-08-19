@@ -323,7 +323,7 @@ def main():
                 topk_prob, topk_index = logit.sigmoid().topk(1)
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
                 topk_labels = [
-                    int(index.item() == 1 and prob > 0.7)
+                    int(index.item() == 1 and prob > 0.8)
                     for index, prob in zip(topk_index, topk_prob)
                 ]
                 wave_label += topk_labels
@@ -333,12 +333,11 @@ def main():
     for i, (wave_label, wave_dur) in enumerate(zip(wave_labels, wave_durs)):
         num_chunks = len(wave_label)
         wave_label = merge_neighboring_ones(wave_label)
-        print(f"Wave {i}: {wave_label} \n")
+        # print(f"Wave {i}: {wave_label} \n")
         print(f"``OSA`` detected in {sum(wave_label)} chunks")
         print(f"Num chunks before merging: {num_chunks}")
         print(f"Duration: {wave_dur} hours")
-        print("\n")
-        print(f"Estimated AHI index: {sum(wave_label) / (10 * wave_dur)}")
+        print(f"Estimated AHI index: {sum(wave_label) / (60 * wave_dur)}\n")
 
 
 if __name__ == "__main__":
