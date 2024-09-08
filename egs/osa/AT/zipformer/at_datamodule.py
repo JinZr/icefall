@@ -206,6 +206,13 @@ class OsaAtDatamodule:
         )
 
         group.add_argument(
+            "--use-attached",
+            type=str2bool,
+            required=True,
+            help="Whether to use data recorded by attached microphone.",
+        )
+
+        group.add_argument(
             "--use-recorder",
             type=str2bool,
             required=True,
@@ -309,6 +316,7 @@ class OsaAtDatamodule:
                 shuffle=self.args.shuffle,
                 num_buckets=self.args.num_buckets,
                 drop_last=self.args.drop_last,
+                buffer_size=2000000,
             )
         else:
             logging.info("Using SimpleCutSampler.")
@@ -419,7 +427,7 @@ class OsaAtDatamodule:
     def osa_recorder_train_cuts(self) -> CutSet:
         logging.info("About to get the osa recorder training cuts.")
         cuts = load_manifest(self.args.manifest_dir / "train_recorder.jsonl.gz").subset(
-            last=33000
+            last=177804
         )
         return cuts
 

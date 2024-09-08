@@ -54,14 +54,14 @@ def get_args():
 
 
 def compute_fbank_osa(args):
-    src_dir = Path("data/manifests")
-    output_dir = Path("data/fbank")
+    src_dir = Path("data/manifests_batch2")
+    output_dir = Path("data/fbank_batch2")
     num_jobs = min(15, os.cpu_count())
     num_mel_bins = 80
 
     extractor = Fbank(FbankConfig(num_mel_bins=num_mel_bins))
 
-    dataset_parts = ("recorder",)
+    dataset_parts = ("recorder_batch2",)
 
     prefix = "osa"
     suffix = "jsonl.gz"

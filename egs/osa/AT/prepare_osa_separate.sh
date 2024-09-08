@@ -88,13 +88,17 @@ python local/fix_sup_after_cut_into_windows.py \
     --input-cuts ./data/fbank/osa_cuts_recorder.jsonl.gz \
     --output-cuts ./data/fbank/osa_cuts_recorder_windows_fixed.jsonl.gz 
 
-python local/remove_cuts_without_sup.py \
+python local/remove_cuts_without_sup_for_recorder.py \
     --input-cuts ./data/fbank/osa_cuts_recorder_windows_fixed.jsonl.gz \
-    --output-cuts ./data/fbank/osa_cuts_recorder_windows_fixed_filtered_empty_sup.jsonl.gz 
+    --output-dir ./data/fbank/
 
 python local/convert_into_at_style_sup.py \
     --input-cuts ./data/fbank/osa_cuts_recorder_windows_fixed_filtered_empty_sup.jsonl.gz \
     --output-cuts ./data/fbank/osa_cuts_recorder_windows_fixed_filtered_empty_sup_at_style.jsonl.gz 
+
+python local/convert_into_at_style_sup_for_recorder.py \
+    --input-cuts ./data/fbank/osa_cuts_recorder_windows_fixed_should_be_normal.jsonl.gz \
+    --output-cuts ./data/fbank/osa_cuts_recorder_windows_fixed_should_be_normal_at_style.jsonl.gz 
 
 cat <(gunzip -c ./data/fbank/osa_cuts_recorder_windows_fixed_filtered_empty_sup_at_style.jsonl.gz ) | \
       shuf | gzip -c > data/fbank/osa_cuts_recorder_windows_fixed_filtered_empty_sup_at_style-shuf.jsonl.gz

@@ -46,6 +46,7 @@ import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
 from at_datamodule import OsaAtDatamodule
+from lhotse import CutSet
 from lhotse.cut import Cut
 from lhotse.dataset.sampling.base import CutSampler
 from lhotse.utils import fix_random_seed
@@ -1034,9 +1035,18 @@ def run(rank, world_size, args):
         register_inf_check_hooks(model)
 
     osa = OsaAtDatamodule(args)
-    train_cuts = osa.osa_train_cuts()
+    train_cuts = CutSet(cuts=[])
+    if params.use_attached:
+        train_cuts += osa.osa_train_cuts()
     if params.use_recorder:
         train_cuts += osa.osa_recorder_train_cuts()
+    
+    logging.info(f"Shuffling training cuts")
+    train_cuts = train_cuts.shuffle(buffer_size=200000)
+
+    if rank == 0:
+        logging.info(f"Description of training cuts")
+        train_cuts.describe()
 
     def remove_short_and_long_utt(c: Cut):
         # Keep only utterances with duration between 1 second and 20 seconds
@@ -1052,7 +1062,7 @@ def run(rank, world_size, args):
 
         return True
 
-    train_cuts = train_cuts.filter(remove_short_and_long_utt)
+    # train_cuts = train_cuts.filter(remove_short_and_long_utt)
 
     if params.start_batch > 0 and checkpoints and "sampler" in checkpoints:
         # We only load the sampler's state dict when it loads a checkpoint
@@ -1063,7 +1073,9 @@ def run(rank, world_size, args):
 
     train_dl = osa.train_dataloaders(train_cuts, sampler_state_dict=sampler_state_dict)
 
-    valid_cuts = osa.osa_eval_cuts()
+    valid_cuts = CutSet(cuts=[])
+    if params.use_attached:
+        valid_cuts += osa.osa_eval_cuts()
     if params.use_recorder:
         valid_cuts += osa.osa_recorder_eval_cuts()
         

@@ -73,7 +73,11 @@ if __name__ == "__main__":
         # line format as: 2024-03-19 21:38:45.019000,0:38:40.019000,21.465,A. 阻塞性
         if len(sup_line) == 1:
             continue
-        global_time, local_time, duration, text = sup_line.strip().split(",")
+        try:
+            global_time, local_time, duration, text = sup_line.strip().split(",")
+        except Exception as e:
+            print(sup_line)
+            raise e
         try:
             start_time_stamp, millisecond = local_time.split(".")
         except:

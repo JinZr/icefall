@@ -51,6 +51,7 @@ import kaldifeat
 import torch
 import torchaudio
 from torch.nn.utils.rnn import pad_sequence
+from tqdm import tqdm
 from train import add_model_arguments, get_model, get_params
 
 
@@ -99,10 +100,31 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--threshold",
+        type=float,
+        required=True,
+        help="The threshold for the audio tagging model.",
+    )
+
+    parser.add_argument(
         "--nc",
         type=int,
         default=20,
         help="The number of batch-fy chunks.",
+    )
+
+    parser.add_argument(
+        "--duration",
+        type=float,
+        required=True,
+        help="The duration of the input sound file in hour.",
+    )
+
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="The offset of the input sound file in second.",
     )
 
     add_model_arguments(parser)
@@ -111,7 +133,10 @@ def get_parser():
 
 
 def read_sound_files(
-    filenames: List[str], expected_sample_rate: float
+    filenames: List[str], 
+    expected_durations: List[float], 
+    expected_offsets: List[int],
+    expected_sample_rate: float,
 ) -> Tuple[List[torch.Tensor], List[float]]:
     """Read a list of sound files into a list 1-D float32 torch tensors.
     Args:
@@ -125,12 +150,15 @@ def read_sound_files(
     ans = []
     dur = []
     assert len(filenames) == 1, "Only one sound file is supported"
-    for f in filenames:
-        wave, sample_rate = torchaudio.load(f)
+    for f, expected_dur, expected_ofs in zip(filenames, expected_durations, expected_offsets):
+        num_frames = int(expected_dur * 60 * 60 * expected_sample_rate)
+        num_frames_offset = int(expected_ofs * expected_sample_rate)
+        wave, sample_rate = torchaudio.load(f, num_frames=num_frames, frame_offset=num_frames_offset)
         assert (
             sample_rate == expected_sample_rate
         ), f"expected sample rate: {expected_sample_rate}. Given: {sample_rate}"
         # We use only the first channel
+
         ans.append(wave[0].contiguous())
         dur.append(wave.size(-1) / sample_rate / 60 / 60)
     return ans, dur
@@ -265,6 +293,9 @@ def main():
     model.to(device)
     model.eval()
 
+    duration = params.duration
+    offset = params.offset
+
     # get the label dictionary
     label_dict = {}
     with open(params.label_dict, "r") as f:
@@ -287,7 +318,10 @@ def main():
 
     logging.info(f"Reading sound files: {params.sound_files}")
     waves, wave_durs = read_sound_files(
-        filenames=params.sound_files, expected_sample_rate=params.sample_rate
+        filenames=params.sound_files, 
+        expected_durations=[duration],
+        expected_offsets=[offset],
+        expected_sample_rate=params.sample_rate
     )
     wave_lens = [w.size(-1) for w in waves]
 
@@ -301,10 +335,9 @@ def main():
             waves[wave_index],
             params.sample_rate,
             audio_chunk_size,
-            # audio_chunk_size,
         )
         wave_label = []
-        for chunk_index in range(0, len(chunks), params.nc):
+        for chunk_index in tqdm(range(0, len(chunks), params.nc)):
             features = fbank(chunks[chunk_index : chunk_index + params.nc])
             features = [f.to(device) for f in features]
             feature_lengths = [f.size(0) for f in features]
@@ -323,7 +356,7 @@ def main():
                 topk_prob, topk_index = logit.sigmoid().topk(1)
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
                 topk_labels = [
-                    int(index.item() == 1 and prob > 0.8)
+                    int(index.item() == 1 and prob.item() > params.threshold)
                     for index, prob in zip(topk_index, topk_prob)
                 ]
                 wave_label += topk_labels
@@ -334,6 +367,7 @@ def main():
         num_chunks = len(wave_label)
         wave_label = merge_neighboring_ones(wave_label)
         # print(f"Wave {i}: {wave_label} \n")
+        print(f"Threshold: {params.threshold}")
         print(f"``OSA`` detected in {sum(wave_label)} chunks")
         print(f"Num chunks before merging: {num_chunks}")
         print(f"Duration: {wave_dur} hours")

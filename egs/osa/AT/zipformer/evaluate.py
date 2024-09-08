@@ -36,6 +36,7 @@ from typing import Dict
 import torch
 import torch.nn as nn
 from at_datamodule import OsaAtDatamodule
+from lhotse import CutSet
 
 try:
     from sklearn.metrics import (
@@ -106,6 +107,13 @@ def get_parser():
         type=str,
         default="zipformer/exp",
         help="The experiment dir",
+    )
+
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        required=True,
+        help="The threshold for audio tagging",
     )
 
     add_model_arguments(parser)
@@ -313,7 +321,9 @@ def main():
     args.return_cuts = True
     osa = OsaAtDatamodule(args)
 
-    osa_cuts = osa.osa_test_cuts()
+    osa_cuts = CutSet(cuts=[])
+    if params.use_attached:
+        osa_cuts = osa.osa_test_cuts()
     if params.use_recorder:
         osa_cuts += osa.osa_recorder_test_cuts()
 
@@ -337,10 +347,12 @@ def main():
     # )
 
     # logging.info(f"mAP for audioset eval is: {mAP}")
-    acc = accuracy_score(labels, logits > 0.6)
-    f1 = f1_score(labels, logits > 0.6, average="micro")
-    recall = recall_score(labels, logits > 0.6, average="micro")
+    threshold = params.threshold # Zengrui Note: originally it was 0.6 
+    acc = accuracy_score(labels, logits > threshold)
+    f1 = f1_score(labels, logits > threshold, average="micro")
+    recall = recall_score(labels, logits > threshold, average="micro")
 
+    logging.info(f"Threshold for OSA eval is: {threshold}")
     logging.info(f"Accuracy for OSA eval is: {acc}")
     logging.info(f"F1 for OSA eval is: {f1}")
     logging.info(f"Recall for OSA eval is: {recall}")
