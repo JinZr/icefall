@@ -53,12 +53,14 @@ def append_relative_timestamp(start_time, rows, offset=0):
     res = []
     for row in rows:
         if (row[0] - start_time).seconds > offset:
-            res.append([
-                row[0],  # Absolute timestamp
-                row[0] - start_time,  # Relative timestamp
-                round(float(row[1]), ndigits=2),  # Duration
-                row[2],  # Event
-            ])
+            res.append(
+                [
+                    row[0],  # Absolute timestamp
+                    row[0] - start_time,  # Relative timestamp
+                    round(float(row[1]), ndigits=2),  # Duration
+                    row[2],  # Event
+                ]
+            )
     return res
 
 
@@ -80,8 +82,6 @@ def to_list(rows):
             else:
                 if curr_dt < datetime.datetime(1970, 1, 1, 12, 0, 0):
                     curr_dt += datetime.timedelta(days=1)
-            
-
 
             try:
                 minute, sec_w_ms = split[4].split(":")
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     rows = get_rows(input_txt)
     rows = to_list(rows)
     rows = filter_rows(rows)
-    
+
     rows = append_relative_timestamp(start_time, rows, offset=args.offset)
 
     # Target CSV format:

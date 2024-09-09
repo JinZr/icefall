@@ -123,7 +123,10 @@ class AudioTaggingModel(nn.Module):
         assert x_lens.ndim == 1, x_lens.shape
 
         # Compute encoder outputs
+        print(x.shape)
         encoder_out, encoder_out_lens = self.forward_encoder(x, x_lens)
+        print(encoder_out.shape)
+        exit()
 
         # Forward the speaker module
         logits = self.forward_audio_tagging(

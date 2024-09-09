@@ -50,12 +50,17 @@ def get_args():
         default=False,
         help="""Perturb speed with factor 0.9 and 1.1 on train subset.""",
     )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        required=True,
+    )
     return parser.parse_args()
 
 
 def compute_fbank_osa(args):
     src_dir = Path("data/manifests_batch2")
-    output_dir = Path("data/fbank_batch2")
+    output_dir = Path(args.output_dir)
     num_jobs = min(15, os.cpu_count())
     num_mel_bins = 80
 
@@ -101,7 +106,8 @@ def compute_fbank_osa(args):
                         + cut_set.perturb_speed(1.1)
                     )
             cut_set = cut_set.cut_into_windows(
-                duration=1.0,
+                duration=5.0,
+                hop=1.0,
                 keep_excessive_supervisions=True,
                 num_jobs=12,
             )

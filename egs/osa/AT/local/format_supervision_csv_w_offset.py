@@ -89,17 +89,18 @@ def to_list(rows):
         raise NotImplementedError
 
 
-
 def append_relative_timestamp(start_time, rows, offset=0):
     res = []
     for row in rows:
         if (row[0] - start_time).seconds > offset:
-            res.append([
-                row[0],  # Absolute timestamp
-                row[0] - start_time,  # Relative timestamp
-                round(float(row[1]), ndigits=2),  # Duration
-                row[2],  # Event
-            ])
+            res.append(
+                [
+                    row[0],  # Absolute timestamp
+                    row[0] - start_time,  # Relative timestamp
+                    round(float(row[1]), ndigits=2),  # Duration
+                    row[2],  # Event
+                ]
+            )
     return res
 
 
