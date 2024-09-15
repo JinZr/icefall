@@ -47,7 +47,7 @@ try:
     )
 except Exception as ex:
     raise RuntimeError(f"{ex}\nPlease run\n" "pip3 install -U scikit-learn")
-from train import add_model_arguments, get_model, get_params, str2multihot
+from train import add_model_arguments, get_model, get_params, str2onehot
 
 from icefall.checkpoint import (
     average_checkpoints,
@@ -136,7 +136,7 @@ def inference_one_batch(
     supervisions = batch["supervisions"]
     audio_event = supervisions["audio_event"]
 
-    label, _ = str2multihot(
+    label, _ = str2onehot(
         audio_event,
         n_classes=params.num_events,
         id_mapping={
@@ -337,8 +337,13 @@ def main():
         model=model,
     )
 
-    logits = torch.cat(logits, dim=0).squeeze(dim=1).detach().numpy()
-    labels = torch.cat(labels, dim=0).long().detach().numpy()
+    logits = torch.cat(logits, dim=0).squeeze(dim=1).detach()
+    labels = torch.cat(labels, dim=0).long().detach()
+    acc_count = 0
+    total_count = 0
+    for logit, label in zip(torch.argmax(logits, dim=-1).numpy(), torch.argmax(labels, dim=-1).numpy()):
+        total_count += 5
+        acc_count += 5 - sum(abs(logit - label))
 
     # compute the metric
     # mAP = average_precision_score(
@@ -348,17 +353,19 @@ def main():
 
     # logging.info(f"mAP for audioset eval is: {mAP}")
     threshold = params.threshold # Zengrui Note: originally it was 0.6 
-    acc = accuracy_score(labels, logits > threshold)
-    f1 = f1_score(labels, logits > threshold, average="micro")
-    recall = recall_score(labels, logits > threshold, average="micro")
+    acc = acc_count / total_count
+    # acc = accuracy_score(labels, logits > threshold)
+    # f1 = f1_score(labels, logits > threshold, average="micro")
+    # recall = recall_score(labels, logits > threshold, average="micro")
 
     logging.info(f"Threshold for OSA eval is: {threshold}")
     logging.info(f"Accuracy for OSA eval is: {acc}")
-    logging.info(f"F1 for OSA eval is: {f1}")
-    logging.info(f"Recall for OSA eval is: {recall}")
+    # logging.info(f"F1 for OSA eval is: {f1}")
+    # logging.info(f"Recall for OSA eval is: {recall}")
 
     logging.info("Done")
 
 
 if __name__ == "__main__":
+
     main()

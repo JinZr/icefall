@@ -353,25 +353,28 @@ def main():
             )
             logits = model.forward_audio_tagging(encoder_out, encoder_out_lens)
             for logit in logits:
-                topk_prob, topk_index = logit.sigmoid().topk(1)
+                topk_prob, topk_index = logit.topk(1)
                 # topk_labels = [label_dict[index.item()] for index in topk_index]
-                topk_labels = [
-                    int(index.item() == 1 and prob.item() > params.threshold)
-                    for index, prob in zip(topk_index, topk_prob)
-                ]
+                topk_labels = []
+                for index, prob in zip(topk_index, topk_prob):
+                    for idx in index:
+                        if prob.item() > params.threshold or idx.item() == 0:
+                            topk_labels.append(idx.item())
                 wave_label += topk_labels
-            wave_labels.append(wave_label)
-
+        wave_labels.append(wave_label)
+    # print(wave_labels)
+    # print(len(wave_labels[0]))
+    # exit()
     logging.info("Done")
     for i, (wave_label, wave_dur) in enumerate(zip(wave_labels, wave_durs)):
         num_chunks = len(wave_label)
-        wave_label = merge_neighboring_ones(wave_label)
+        # wave_label = merge_neighboring_ones(wave_label)
         # print(f"Wave {i}: {wave_label} \n")
         print(f"Threshold: {params.threshold}")
         print(f"``OSA`` detected in {sum(wave_label)} chunks")
         print(f"Num chunks before merging: {num_chunks}")
         print(f"Duration: {wave_dur} hours")
-        print(f"Estimated AHI index: {sum(wave_label) / (60 * wave_dur)}\n")
+        print(f"Estimated AHI index: {sum(wave_label) / wave_dur}\n")
 
 
 if __name__ == "__main__":

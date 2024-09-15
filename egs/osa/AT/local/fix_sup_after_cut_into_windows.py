@@ -1,7 +1,11 @@
 import argparse
+from copy import deepcopy
 
 from lhotse import CutSet
+from lhotse.supervision import AlignmentItem
 from tqdm import tqdm
+
+DURATION = 5
 
 
 def parse_args():
@@ -22,14 +26,42 @@ if __name__ == "__main__":
     input_cuts = CutSet.from_file(args.input_cuts)
     fixed_cuts = []
     for cut in tqdm(input_cuts, desc="Fixing supervisions"):
+        new_cut = deepcopy(cut)
+        new_cut.supervisions = []
         duration = cut.duration
-        for supervision in cut.supervisions:
-            if supervision.start < 0:
-                supervision.start = 0
-            if supervision.end > duration:
-                supervision.end = duration
-        fixed_cuts.append(cut)
+        all_ali = []
+        for sup_index, supervision in enumerate(cut.supervisions):
+            new_supervision = deepcopy(supervision)
+            if sup_index == 0:
+                if supervision.start < 0:
+                    new_supervision.start = 0
+                if supervision.duration > duration:
+                    new_supervision.duration = (
+                        duration
+                        if len(cut.supervisions) == 1
+                        else cut.supervisions[sup_index + 1].start
+                    )
+                if supervision.start < 0:
+                    new_supervision.start = 0
+            else:
+                new_supervision.duration = (
+                    cut.supervisions[sup_index + 1].start
+                    if sup_index + 1 < len(cut.supervisions)
+                    else duration - new_supervision.start
+                )
 
-    output_cuts = CutSet.from_cuts(input_cuts)
+            new_supervision.alignment = {
+                "event": list(
+                    filter(
+                        lambda e: e.start >= cut.start
+                        and e.start < cut.start + DURATION,
+                        supervision.alignment["event"],
+                    )
+                ),
+            }
+            new_cut.supervisions.append(new_supervision)
+        fixed_cuts.append(new_cut)
+
+    output_cuts = CutSet.from_cuts(fixed_cuts)
     output_cuts.to_jsonl(args.output_cuts)
     print(f"Cut manifest with supervisions fixed was saved to {args.output_cuts}")

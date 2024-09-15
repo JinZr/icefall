@@ -23,10 +23,16 @@ if __name__ == "__main__":
     fixed_cuts = []
     for cut in tqdm(input_cuts, desc="Converting supervisions"):
         if len(cut.supervisions) > 1:
+            raise ValueError(
+                f"This script expects cuts with a single supervision. {cut}"
+            )
             at_label = ";".join([s.text for s in cut.supervisions])
             at_label_text = ";".join([s.custom["category"] for s in cut.supervisions])
         else:
-            at_label = cut.supervisions[0].text
+            # at_label = cut.supervisions[0].text
+            at_label = ";".join(
+                [e.symbol for e in cut.supervisions[0].alignment["event"]]
+            )
             at_label_text = cut.supervisions[0].custom["category"]
         # cut.custom = {"audio_event": at_label}
         cut.supervisions = [
@@ -39,6 +45,7 @@ if __name__ == "__main__":
                 text=at_label,
                 language="Sleep",
                 speaker=cut.supervisions[0].speaker,
+                alignment=cut.supervisions[0].alignment,
                 custom={"category": at_label_text, "audio_event": at_label},
             )
         ]

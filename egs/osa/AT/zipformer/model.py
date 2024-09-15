@@ -18,7 +18,6 @@ import logging
 import random
 from typing import List, Optional, Tuple
 
-import k2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -60,13 +59,17 @@ class AudioTaggingModel(nn.Module):
         self.encoder = encoder
         self.encoder_dim = encoder_dim
 
+        self.linear = nn.Linear(encoder_dim, 50)
+
         self.classifier = nn.Sequential(
             nn.Dropout(0.1),
-            nn.Linear(encoder_dim, num_events),
+            nn.Linear(1230, num_events),
+            nn.Softmax(dim=-1),
         )
 
         # for multi-class classification
-        self.criterion = torch.nn.BCEWithLogitsLoss(reduction="sum")
+        # self.criterion = torch.nn.BCEWithLogitsLoss(reduction="sum")
+        self.criterion = torch.nn.CrossEntropyLoss(reduction="sum")
 
     def forward_encoder(
         self,
@@ -123,16 +126,13 @@ class AudioTaggingModel(nn.Module):
         assert x_lens.ndim == 1, x_lens.shape
 
         # Compute encoder outputs
-        print(x.shape)
         encoder_out, encoder_out_lens = self.forward_encoder(x, x_lens)
-        print(encoder_out.shape)
-        exit()
 
         # Forward the speaker module
         logits = self.forward_audio_tagging(
             encoder_out=encoder_out, encoder_out_lens=encoder_out_lens
         )  # (N, num_classes)
-
+        
         loss = self.criterion(logits, target)
 
         return loss
@@ -149,12 +149,9 @@ class AudioTaggingModel(nn.Module):
         Returns:
           A 3-D tensor of shape (N, num_classes).
         """
-        logits = self.classifier(encoder_out)  # (N, T, num_classes)
-        padding_mask = make_pad_mask(encoder_out_lens)
-        logits[padding_mask] = 0
-        logits = logits.sum(dim=1)  # mask the padding frames
-        logits = logits / (~padding_mask).sum(dim=1).unsqueeze(-1).expand_as(
-            logits
-        )  # normalize the logits
-
+        N, T, C = encoder_out.shape
+        hidden = self.linear(encoder_out)  # (N, T, num_classes)
+        logits = self.classifier(hidden.view(N, 5, -1))
+        # logits = logits.sum(dim=1)  # mask the padding frames
+        
         return logits

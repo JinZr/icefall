@@ -45,6 +45,7 @@ import sentencepiece as spm
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
+import torch.nn.functional as F
 from at_datamodule import OsaAtDatamodule
 from lhotse import CutSet
 from lhotse.cut import Cut
@@ -647,12 +648,12 @@ def compute_loss(
     # at entry, feature is (N, T, C)
     assert feature.ndim == 3
     feature = feature.to(device)
-
+    
     supervisions = batch["supervisions"]
     events = supervisions[
         "audio_event"
     ]  # the label indices are in CED format (https://github.com/RicherMans/CED)
-    labels, _ = str2multihot(
+    labels, _ = str2onehot(
         events,
         n_classes=params.num_events,
         id_mapping={
@@ -691,26 +692,19 @@ def compute_loss(
     return loss, info
 
 
-def str2multihot(events: List[str], n_classes=527, id_mapping=None):
+def str2onehot(events: List[str], n_classes: int, id_mapping=None):
     # Convert strings separated by semi-colon to multi-hot class labels
     # input: ["0;1", "1;2"]
     # output: torch.tensor([[1,1,0], [0,1,1]])
     labels = [list(map(int, event.split(";"))) for event in events]
+    labels = [[id_mapping[e] for e in event] for event in labels]
+    # labels = [[F.one_hot(e, num_classes=n_classes) for e in event] for event in labels]
+    labels = [[[1, 0] if e == 0 else [0, 1] for e in event] for event in labels]
     batch_size = len(labels)
-    out = torch.zeros(batch_size, n_classes)
-
-    for i, label in enumerate(labels):
-        # if id_mapping is not None:
-        #     label = [id_mapping[lb] for lb in label]
-        # out[i, label] = 1
-        if id_mapping is not None:
-            label = [id_mapping[lb] for lb in label]
-        if 1 in label:
-            out[i, 1] = 1
-        else:
-            out[i, 0] = 1
-
+    out = torch.tensor(data=labels, dtype=torch.float32)    
+    
     return out, labels
+
 
 
 def compute_validation_loss(

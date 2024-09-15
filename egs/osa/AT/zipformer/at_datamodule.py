@@ -274,9 +274,9 @@ class OsaAtDatamodule:
                 SpecAugment(
                     time_warp_factor=self.args.spec_aug_time_warp_factor,
                     num_frame_masks=num_frame_masks,
-                    features_mask_size=27,
+                    features_mask_size=10,
                     num_feature_masks=2,
-                    frames_mask_size=100,
+                    frames_mask_size=20,
                 )
             )
         else:
