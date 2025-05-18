@@ -17,12 +17,15 @@ def get_args():
     )
     return parser.parse_args()
 
+
 def diar(args, pipeline, wav_path: Path) -> List[str]:
     spkr_diar = []
     diarization = pipeline(wav_path)
     for turn, _, speaker in diarization.itertracks(yield_label=True):
-        spkr_diar.append(f"start={turn.start:.2f}s stop={turn.end:.2f}s speaker_{speaker}")
-        # start=0.2s stop=1.5s speaker_0  
+        spkr_diar.append(
+            f"start={turn.start:.2f}s stop={turn.end:.2f}s speaker_{speaker}"
+        )
+        # start=0.2s stop=1.5s speaker_0
         # start=1.8s stop=3.9s speaker_1
         # start=4.2s stop=5.7s speaker_0
         # ...
@@ -37,7 +40,7 @@ if __name__ == "__main__":
     )
     if torch.cuda.is_available():
         pipeline.to(torch.device("cuda"))
-    
+
     for audio_file in args.audio_dir.glob("*.wav"):
         spkr_diar = diar(args, pipeline, args.audio_dir)
         for line in spkr_diar:
