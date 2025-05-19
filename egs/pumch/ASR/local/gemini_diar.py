@@ -6,8 +6,13 @@ from google import genai
 from tqdm import tqdm
 
 GEMINI_PROMPT = """
-Process the given audio file. Perform speaker diarization to identify who spoke when, and automatic speech recognition (ASR) to transcribe the content.
+You are given a medical doctor–patient reading session in which the patient has a cleft lip and palate resulting in an articulation disorder. During the session, the doctor asks the patient to read aloud a series of target sentences in Chinese. Because of the patient's speech impairment, an automatic speech recognition transcript may contain errors. Your job is to:
+1. Process the given audio file. 
+2. Perform speaker diarization to identify who spoke when, and automatic speech recognition (ASR) to transcribe the content.
+3. Identify and correct any transcription mistakes by referencing the exact Chinese sentences below.
+4. Return a clean, error-free transcript that matches what the patient should have said.
 
+You should:
 Return the output as a single JSON object containing a list of utterances. 
 Do not merge two consecutive sentences. 
 Ensure that diarization results for digits remain separate when the content involves counting digits. 
@@ -45,6 +50,24 @@ Ensure that diarization results for digits remain separate when the content invo
 When encountering utterances with overlapping speech, create separate entries for each speaker's contribution, even if they overlap in time.
 When encountering utterances containing entities, such as names or locations, ensure that part of the transcriptions are removed and the timestamps are adjusted accordingly.
 
+Target Texts (in Chinese)
+	从1数到10或从1数到20
+	爸爸跑步
+	弟弟踢皮球
+	哥哥喝可乐
+	头发飞飞
+	谢谢姐姐
+	妈妈买牛奶
+	猴子喜欢香蕉
+	大象喜欢草莓
+	长颈鹿喜欢山楂树
+	早饭在桌子上
+	奇怪而有趣的旗
+	姥姥的榴莲
+	叔叔的老师
+	长长的长城
+	炒菜菜
+  奶奶买柠檬
 """
 
 
