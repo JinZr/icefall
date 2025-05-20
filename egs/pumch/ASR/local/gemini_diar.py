@@ -67,7 +67,7 @@ Target Texts (in Chinese)
 	叔叔的老师
 	长长的长城
 	炒菜菜
-  奶奶买柠檬
+    奶奶买柠檬
 """
 
 
