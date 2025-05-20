@@ -108,7 +108,8 @@ def main(args):
 
         try:
             response = client.models.generate_content(
-                model="gemini-2.5-pro-preview-05-06", contents=[GEMINI_PROMPT, audio_file_cli]
+                model="gemini-2.5-pro-preview-05-06",
+                contents=[GEMINI_PROMPT, audio_file_cli],
             )
         except Exception as e:
             print(f"Error processing {audio_file}: {e}")
