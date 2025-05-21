@@ -54,7 +54,8 @@ When encountering utterances with overlapping speech, create separate entries fo
 When encountering utterances containing entities, such as names or locations, ensure that segment is not contained in the result.
 
 Target Texts (in Chinese)
-	从1数到10或从1数到20
+    一二三四五六七八九十
+	一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十
 	爸爸跑步
 	弟弟踢皮球
 	哥哥喝可乐
