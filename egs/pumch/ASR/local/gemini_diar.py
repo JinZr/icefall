@@ -12,12 +12,17 @@ You are given a medical doctor–patient reading session in which the patient ha
 3. Identify and correct any transcription mistakes by referencing the exact Chinese sentences below.
 4. Return a clean, error-free transcript that matches what the patient should have said.
 
+* **Crucial: Precise Utterance Boundaries:**
+    * Timestamps for the start and end of each speaker segment must **tightly correspond to the audible speech**.
+    * The **start time** should mark the very beginning of the spoken words, minimizing any leading silence.
+    * The **end time** should mark the very end of the spoken words, minimizing any trailing silence.
+    * Avoid including significant pauses *within* a single utterance segment unless it's a filled pause (e.g., "um," "uh"). Treat longer silences as delimiters between segments or as "[SILENCE]" events.
+    * Pay close attention to subtle cues like breath sounds or slight hesitations to accurately define the onset and offset of speech.
+
+
 You should:
 Return the output as a single JSON object containing a list of utterances. 
-Do not merge two consecutive sentences. 
-Ensure that diarization results for digits remain separate when the content involves counting digits. 
-When encountering utterances with overlapping speech, create separate entries for each speaker's contribution, even if they overlap in time.
-When encountering utterances containing entities, such as names or locations, ensure that part of the transcriptions are removed and the timestamps are adjusted accordingly.
+When encountering utterances containing entities, such as names or locations, ensure that segment is not contained in the result.
 Each utterance object in the list should include:
 - "speaker_id": A unique identifier for the speaker (e.g., "Speaker 1"). always assign the same speaker id to the same speaker, and always make the doctor as "Speaker 1".
 - "start_time": The start time of the utterance in seconds.
@@ -45,10 +50,8 @@ Example format:
 
 Provide only the JSON output, do not include any other text or explanation. Do not include any additional information, markdown syntax or metadata outside of the JSON format. The JSON should be valid and well-formed.
 
-Do not merge two consecutive sentences. 
-Ensure that diarization results for digits remain separate when the content involves counting digits. 
 When encountering utterances with overlapping speech, create separate entries for each speaker's contribution, even if they overlap in time.
-When encountering utterances containing entities, such as names or locations, ensure that part of the transcriptions are removed and the timestamps are adjusted accordingly.
+When encountering utterances containing entities, such as names or locations, ensure that segment is not contained in the result.
 
 Target Texts (in Chinese)
 	从1数到10或从1数到20
@@ -67,7 +70,10 @@ Target Texts (in Chinese)
 	叔叔的老师
 	长长的长城
 	炒菜菜
-    奶奶买柠檬
+  奶奶买柠檬
+
+these sentences should stay as separate segments.
+retain the stuttering and disfluencies in the transcript, but do not include any additional information or explanations. The JSON should be valid and well-formed.
 """
 
 

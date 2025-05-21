@@ -50,7 +50,7 @@ def main():
         with open(json_path, "r", encoding="utf-8") as j:
             data = json.load(j)
         utterances = data.get("utterances", [])
-        utterances = sorted(utterances, key=lambda x: x.get("start_time", 0.0))
+        # utterances = sorted(utterances, key=lambda x: x.get("start_time", 0.0))
 
         # Prepare Kaldi entries
         wav_scp = []
@@ -84,11 +84,11 @@ def main():
 
         # Write Kaldi data files in separate directory
         with open(kaldi_dir / "wav.scp", "a", encoding="utf-8") as f:
-            f.write("\n".join(wav_scp) + "\n")
+            f.write("\n".join(sorted(wav_scp, key=lambda x: x.split(" ")[0])) + "\n")
         with open(kaldi_dir / "text", "a", encoding="utf-8") as f:
-            f.write("\n".join(text) + "\n")
+            f.write("\n".join(sorted(text, key=lambda x: x.split(" ")[0])) + "\n")
         with open(kaldi_dir / "utt2spk", "a", encoding="utf-8") as f:
-            f.write("\n".join(utt2spk) + "\n")
+            f.write("\n".join(sorted(utt2spk, key=lambda x: x.split(" ")[0])) + "\n")
 
 
 if __name__ == "__main__":
