@@ -32,7 +32,7 @@ jobs:
           # outputting for debugging purposes
           python ./.github/scripts/docker/generate_build_matrix.py
           MATRIX=$(python ./.github/scripts/docker/generate_build_matrix.py)
-          echo "::set-output name=matrix::${MATRIX}"
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
 
   audioset:
     needs: generate_build_matrix
@@ -134,4 +134,3 @@ jobs:
           repo_name: k2-fsa/sherpa-onnx
           repo_token: ${{ secrets.UPLOAD_GH_SHERPA_ONNX_TOKEN }}
           tag: audio-tagging-models
-

@@ -32,7 +32,7 @@ jobs:
           # outputting for debugging purposes
           python ./.github/scripts/docker/generate_build_matrix.py --min-torch-version "2.3"
           MATRIX=$(python ./.github/scripts/docker/generate_build_matrix.py --min-torch-version "2.3")
-          echo "::set-output name=matrix::${MATRIX}"
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
 
   ljspeech:
     needs: generate_build_matrix

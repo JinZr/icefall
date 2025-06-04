@@ -31,7 +31,7 @@ jobs:
           # outputting for debugging purposes
           python ./.github/scripts/docker/generate_build_matrix.py
           MATRIX=$(python ./.github/scripts/docker/generate_build_matrix.py)
-          echo "::set-output name=matrix::${MATRIX}"
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
   librispeech:
     needs: generate_build_matrix
     name: py${{ matrix.python-version }} torch${{ matrix.torch-version }} v${{ matrix.version }}
