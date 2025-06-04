@@ -1,11 +1,10 @@
 import argparse
 import json
+import subprocess
 from pathlib import Path
 
 from google import genai
 from tqdm import tqdm
-import subprocess
-import tempfile
 
 GEMINI_PROMPT = """
 You are given a **synchronised video clip** (with its audio track) of a medical doctor–patient reading session.  
@@ -86,11 +85,19 @@ def get_args():
         required=True,
         help="""Path to the directory where the output files will be saved""",
     )
+    parser.add_argument(
+        "--ds-dir",
+        type=Path,
+        required=True,
+        help="""Directory to store the down‑sampled video files""",
+    )
     return parser.parse_args()
 
 
 def main(args):
     video_dir = args.video_dir
+    ds_dir = args.ds_dir
+    ds_dir.mkdir(parents=True, exist_ok=True)
     # Collect videos with common extensions, case‑insensitive
     video_files = []
     for pattern in ("*.mp4", "*.MP4", "*.mov", "*.MOV"):
@@ -106,39 +113,39 @@ def main(args):
             print(f"Output file {output_file} already exists. Skipping.")
             continue
 
-        # --- Down‑sample to a lower‑resolution temporary file (aiming <50 MB) ---
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
-            tmp_path = Path(tmp.name)
-        ffmpeg_cmd = [
-            "ffmpeg",
-            "-y",
-            "-i",
-            str(video_file),
-            "-vf",
-            "scale='min(960,iw)':-2",  # cap width at 960 px; keep aspect
-            "-c:v",
-            "libx264",
-            "-preset",
-            "fast",
-            "-crf",
-            "28",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "128k",
-            str(tmp_path),
-        ]
-        try:
-            subprocess.run(
-                ffmpeg_cmd,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            upload_path = tmp_path
-        except subprocess.CalledProcessError:
-            print(f"ffmpeg failed for {video_file}; falling back to original.")
-            upload_path = video_file
+        ds_file = ds_dir / f"{video_file.stem}_960p.mp4"
+        # Re‑encode only if the down‑sampled file does not exist
+        if not ds_file.exists():
+            ffmpeg_cmd = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(video_file),
+                "-vf",
+                "scale='min(960,iw)':-2",  # cap width at 960 px; keep aspect
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "28",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                str(ds_file),
+            ]
+            try:
+                subprocess.run(
+                    ffmpeg_cmd,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                print(f"ffmpeg failed for {video_file}; falling back to original.")
+                ds_file = video_file
+        upload_path = ds_file
 
         client = genai.Client(api_key=sk_token)
         video_file_cli = client.files.upload(file=str(upload_path))
@@ -155,9 +162,6 @@ def main(args):
         response_json = json.loads(response_text)
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(response_json, f, ensure_ascii=False, indent=4)
-        # Remove the temporary down‑sampled file, if one was created
-        if upload_path != video_file and Path(upload_path).exists():
-            Path(upload_path).unlink()
 
 
 if __name__ == "__main__":
