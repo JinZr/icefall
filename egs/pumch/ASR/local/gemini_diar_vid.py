@@ -89,7 +89,7 @@ def get_args():
         "--ds-dir",
         type=Path,
         required=True,
-        help="""Directory to store the down‑sampled video files""",
+        help="""Directory to store the down-sampled video files""",
     )
     return parser.parse_args()
 
