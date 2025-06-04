@@ -53,7 +53,7 @@ if __name__ == "__main__":
         help="Path to Kaldi data directory containing wav.scp and text"
     )
     parser.add_argument(
-        "--model", type=str, default="base",
+        "--model", type=str, default="medium",
         help="Whisper model size (tiny, base, small, medium, large)"
     )
     parser.add_argument(
@@ -91,7 +91,7 @@ if __name__ == "__main__":
             if not os.path.exists(wav_path):
                 print(f"Warning: wav file {wav_path} not found, skipping.")
                 continue
-            result = model.transcribe(wav_path, language=args.language)
+            result = model.transcribe(wav_path, language=args.language, initial_prompt="以下是普通话的句子")
             hyp = result['text'].strip()
             ref = refs[utt_id].strip()
 
@@ -103,6 +103,7 @@ if __name__ == "__main__":
 
             print(f"{utt_id}: WER={utt_wer:.3f}, CER={utt_cer:.3f}")
             # write to TSV
+            print(f"{utt_id}\t{ref}\t{hyp}\t{utt_wer:.3f}\t{utt_cer:.3f}\n")
             outf.write(f"{utt_id}\t{ref}\t{hyp}\t{utt_wer:.3f}\t{utt_cer:.3f}\n")
 
         if count > 0:
