@@ -1,6 +1,6 @@
 import argparse
 import json
-import subprocess
+import time
 from pathlib import Path
 
 from google import genai
@@ -85,19 +85,38 @@ def get_args():
         required=True,
         help="""Path to the directory where the output files will be saved""",
     )
-    parser.add_argument(
-        "--ds-dir",
-        type=Path,
-        required=True,
-        help="""Directory to store the down-sampled video files""",
-    )
     return parser.parse_args()
+
+
+def wait_until_active(client, file_obj, poll_interval: int = 5, timeout: int = 600):
+    """
+    Poll the file status until it becomes ACTIVE or raise a RuntimeError
+    after the timeout.
+
+    Args:
+        client: genai.Client instance.
+        file_obj: The File object returned by `client.files.upload`.
+        poll_interval: Seconds between status checks.
+        timeout: Maximum seconds to wait before giving up.
+
+    Returns:
+        The refreshed File object in ACTIVE state.
+    """
+    waited = 0
+    while not getattr(file_obj, "state", None) or file_obj.state.name != "ACTIVE":
+        if waited >= timeout:
+            raise RuntimeError(
+                f"File {getattr(file_obj, 'name', 'UNKNOWN')} "
+                f"did not become ACTIVE within {timeout} s."
+            )
+        time.sleep(poll_interval)
+        waited += poll_interval
+        file_obj = client.files.get(name=file_obj.name)
+    return file_obj
 
 
 def main(args):
     video_dir = args.video_dir
-    ds_dir = args.ds_dir
-    ds_dir.mkdir(parents=True, exist_ok=True)
     # Collect videos with common extensions, case‑insensitive
     video_files = []
     for pattern in ("*.mp4", "*.MP4", "*.mov", "*.MOV"):
@@ -107,54 +126,27 @@ def main(args):
         return
     with open("./local/sk_token", "r") as f:
         sk_token = f.read().strip()
+    client = genai.Client(api_key=sk_token)
+
     for video_file in tqdm(sorted(video_files)):
         output_file = args.output_dir / (video_file.stem + ".json")
         if output_file.exists():
             print(f"Output file {output_file} already exists. Skipping.")
             continue
 
-        ds_file = ds_dir / f"{video_file.stem}_960p.mp4"
-        # Re‑encode only if the down‑sampled file does not exist
-        if not ds_file.exists():
-            ffmpeg_cmd = [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(video_file),
-                "-vf",
-                "scale='min(960,iw)':-2",  # cap width at 960 px; keep aspect
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "28",
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                str(ds_file),
-            ]
-            try:
-                subprocess.run(
-                    ffmpeg_cmd,
-                    check=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-            except subprocess.CalledProcessError:
-                print(f"ffmpeg failed for {video_file}; falling back to original.")
-                ds_file = video_file
-        upload_path = ds_file
-
-        client = genai.Client(api_key=sk_token)
-        video_file_cli = client.files.upload(file=str(upload_path))
-
+        upload_path = video_file
+        print(f"Processing {video_file}...")
+        video_file_cli = client.files.upload(file=upload_path)
         try:
+            # Wait until the uploaded video is fully processed
+            video_file_cli = wait_until_active(client, video_file_cli)
             response = client.models.generate_content(
                 model="gemini-2.5-pro-preview-05-06",
-                contents=[video_file_cli, GEMINI_PROMPT],
+                contents=[GEMINI_PROMPT, video_file_cli],
             )
+        except RuntimeError as e:
+            print(f"Skipping {video_file} – {e}")
+            continue
         except Exception as e:
             print(f"Error processing {video_file}: {e}")
             continue
