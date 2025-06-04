@@ -101,7 +101,7 @@ def main(args):
     if not audio_files:
         print("No audio files found in the specified directory.")
         return
-    with open("./sk_token", "r") as f:
+    with open("./local/sk_token", "r") as f:
         sk_token = f.read().strip()
     for audio_file in tqdm(sorted(audio_files)):
         output_file = args.output_dir / (audio_file.stem + ".json")
