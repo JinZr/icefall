@@ -6,30 +6,25 @@ from google import genai
 from tqdm import tqdm
 
 GEMINI_PROMPT = """
-You are given a medical doctor–patient reading session in which the patient has a cleft lip and palate resulting in an articulation disorder. During the session, the doctor asks the patient to read aloud a series of target sentences in Chinese. Because of the patient's speech impairment, an automatic speech recognition transcript may contain errors. Your job is to:
-1. Process the given audio file. 
-2. Perform speaker diarization to identify who spoke when, and automatic speech recognition (ASR) to transcribe the content.
-3. Identify and correct any transcription mistakes by referencing the exact Chinese sentences below.
-4. Return a clean, error-free transcript that matches what the patient should have said.
+You are given a medical doctor-patient reading session in which the patient has a cleft lip and palate resulting in an articulation disorder. During the session, the doctor asks the patient to read aloud a series of target sentences in Chinese. Because of the patient's speech impairment, an automatic speech recognition transcript may contain errors. Your job is to:
 
-* **Crucial: Precise Utterance Boundaries:**
-    * Timestamps for the start and end of each speaker segment must **tightly correspond to the audible speech**.
-    * The **start time** should mark the very beginning of the spoken words, minimizing any leading silence.
-    * The **end time** should mark the very end of the spoken words, minimizing any trailing silence.
-    * Avoid including significant pauses *within* a single utterance segment unless it's a filled pause (e.g., "um," "uh"). Treat longer silences as delimiters between segments or as "[SILENCE]" events.
-    * Pay close attention to subtle cues like breath sounds or slight hesitations to accurately define the onset and offset of speech.
+TASKS  
+1. Load and analyse the audio file.  
+2. **Speaker diarization** - always label the doctor as `"Speaker 1"` and keep that ID consistent.  
+3. **Automatic speech recognition (ASR).**
 
+RULES  
+1. **Verbatim transcription** - keep every stutter (“爸、爸爸”), repetition, filler (“呃”), and self-correction. Do not normalise or delete disfluencies.  
+2. **Partial readings** - if the patient omits or stops mid-sentence, transcribe exactly what is audible. Never auto-complete.  
+3. **Error-correction scope** - fix only obvious ASR typos for syllables that are clearly spoken. Do not “correct” mis-pronunciations or missing words.  
+4. **Timing precision** -  
+   • `start_time` is the true speech onset; `end_time` is the true offset (≤ 0.1 s of silence on either side).  
+   • Use `[SILENCE]` segments or new utterances for pauses > 0.5 s.  
+5. **Overlap** - create separate entries when speakers talk at the same time.  
+6. **Privacy** - remove any names or locations that might appear.  
+7. **Output** - return one valid JSON object and *nothing else*.
 
-You should:
-Return the output as a single JSON object containing a list of utterances. 
-When encountering utterances containing entities, such as names or locations, ensure that segment is not contained in the result.
-Each utterance object in the list should include:
-- "speaker_id": A unique identifier for the speaker (e.g., "Speaker 1"). always assign the same speaker id to the same speaker, and always make the doctor as "Speaker 1".
-- "start_time": The start time of the utterance in seconds.
-- "end_time": The end time of the utterance in seconds, calculated as the start time plus the duration of the utterance, make sure the end time lays after the speaker finishes speaking.
-- "transcript": The transcribed text for that utterance. The transcribed text MUST be returned in Simplified Chinese 简体中文, including numbers (e.g., 十一，十二), punctuation.
-
-Example format:
+Example schema (illustrative only):
 {
   "utterances": [
     {
@@ -48,12 +43,7 @@ Example format:
   ]
 }
 
-Provide only the JSON output, do not include any other text or explanation. Do not include any additional information, markdown syntax or metadata outside of the JSON format. The JSON should be valid and well-formed.
-
-When encountering utterances with overlapping speech, create separate entries for each speaker's contribution, even if they overlap in time.
-When encountering utterances containing entities, such as names or locations, ensure that segment is not contained in the result.
-
-Target Texts (in Chinese)
+REFERENCE SENTENCES (for spell-checking only — **never copy words the patient does not actually say**):  
     一二三四五六七八九十
 	一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十
 	爸爸跑步
@@ -71,10 +61,10 @@ Target Texts (in Chinese)
 	叔叔的老师
 	长长的长城
 	炒菜菜
-  奶奶买柠檬
+    奶奶买柠檬
 
 these sentences should stay as separate segments.
-retain the stuttering and disfluencies in the transcript, but do not include any additional information or explanations. The JSON should be valid and well-formed.
+**REMEMBER - OUTPUT ONLY THE JSON; NEVER INSERT WORDS THAT WERE NOT HEARD.**
 """
 
 
