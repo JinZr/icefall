@@ -20,12 +20,11 @@ TASKS
 RULES  
 1. **Verbatim transcription** – retain every stutter (“爸、爸爸”), repetition, filler (“呃”), and self‑correction. Do not normalise or delete disfluencies.  
 2. **Partial readings** – if the patient omits or stops mid‑sentence, transcribe exactly what is audible/visible. Never auto‑complete.  
-3. **Error‑correction scope** – fix only obvious ASR typos for syllables that are clearly spoken; do **not** “correct” mis‑pronunciations or missing words.  
+3. **Error‑correction scope** – fix only obvious ASR typos for syllables and mis‑pronunciations that are clearly spoken; do **not** “correct” missing words.  
 4. **Timing precision** –  
    • `start_time` is the true speech onset; `end_time` is the true offset (≤ 0.1 s of silence on either side).  
-   • Insert `[SILENCE]` segments or new utterances for pauses > 0.5 s.  
 5. **Overlap** – create separate entries when speakers talk at the same time.  
-6. **Privacy & visual content** – do not describe personal appearance; remove any names or locations that might appear in speech or on screen.  
+6. **Privacy & visual content** – do not describe personal appearance; remove utterances that contain any names or locations that might appear in speech or on screen.  
 7. **Output** – return one valid JSON object and *nothing else*.
 
 Example schema (illustrative only):
@@ -66,7 +65,14 @@ REFERENCE SENTENCES (for spell‑checking only — **never copy words the patien
     长长的长城  
     炒菜菜  
     奶奶买柠檬  
-
+    一起去爬坡
+    宝宝带板凳
+    贝贝唱支歌
+    妈妈牛牛毛毛猫
+    妈妈模样美
+    牛牛没眉毛
+    他去无锡市
+    我到黑龙江
 **REMEMBER – RETURN ONLY THE JSON; NEVER INSERT WORDS THAT ARE NOT HEARD OR SEEN.**
 """
 
