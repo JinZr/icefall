@@ -51,9 +51,9 @@ Example schema (illustrative only):
 
 
 REFERENCE SENTENCES (for spell-checking only — never insert words not explicitly spoken):
-一二三四五六七八九十, 一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十, 爸爸跑步, 弟弟踢皮球, 哥哥喝可乐, 头发飞飞, 谢谢姐姐, 妈妈买牛奶, 猴子喜欢香蕉, 大象喜欢草莓, 长颈鹿喜欢山楂树, 早饭在桌子上, 奇怪而有趣的旗, 姥姥的榴莲, 叔叔的老师, 长长的长城, 炒菜菜, 奶奶买柠檬, 一起去爬坡, 宝宝带板凳, 贝贝唱支歌, 妈妈牛牛毛毛猫, 妈妈模样美, 牛牛没眉毛, 他去无锡市, 我到黑龙江.
+一二三四五六七八九十, 一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十, 爸爸跑步, 弟弟踢皮球, 哥哥喝可乐, 头发飞飞, 谢谢姐姐, 妈妈买牛奶, 猴子喜欢香蕉, 大象喜欢草莓, 长颈鹿喜欢山楂树, 早饭在桌子上, 奇怪而有趣的旗, 姥姥的榴莲, 叔叔的老师, 长长的长城, 炒菜菜, 奶奶买柠檬, 一起去爬坡, 宝宝带板凳, 贝贝唱支歌, 妈妈牛牛磨麦苗, 妈妈模样美, 牛牛眉眼浓, 他去无锡市, 我到黑龙江.
 
-REMEMBER - RETURN ONLY THE JSON; NEVER INSERT WORDS THAT ARE NOT HEARD OR SEEN. ENSURE ALL TIMESTAMPS ARE ACCURATE, CONTINUOUS, AND REFLECT REALISTIC SPEECH INTERVALS. DO NOT BUMP THE TIMESTAMPS FROM AROUND 50 SECONDS TO MORE THAN 100 SECONDS."""
+REMEMBER - RETURN ONLY THE JSON; NEVER INSERT WORDS THAT ARE NOT HEARD OR SEEN. ENSURE ALL TIMESTAMPS ARE ACCURATE, CONTINUOUS, AND REFLECT REALISTIC SPEECH INTERVALS. DO NOT BUMP THE TIMESTAMPS FROM AROUND 50 SECONDS TO MORE THAN 100 SECONDS. THE INTERVAL BETWEEN TWO CONSECUTIVE UTTERANCES MUST NOT EXCEED 2 SECONDS UNLESS THERE IS A REAL PAUSE IN SPEECH."""
 
 
 def get_args():
@@ -137,6 +137,7 @@ def main(args):
             continue
         response_text = response.text.replace("```json", "").replace("```", "")
         response_json = json.loads(response_text)
+        response_json["speaker_id"] = video_file.stem.split(" ")[-1]  # Ensure speaker ID is set
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(response_json, f, ensure_ascii=False, indent=4)
 
