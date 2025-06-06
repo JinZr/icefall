@@ -7,25 +7,28 @@ from google import genai
 from tqdm import tqdm
 
 GEMINI_PROMPT = """
-You are given a **synchronised video clip** (with its audio track) of a medical doctor–patient reading session.  
-The patient has a cleft lip and palate that causes articulation disorders.  
-Your job is to produce a diarised, verbatim transcript that faithfully captures what is actually spoken, using **both audio and visual cues (lip movements, speaker presence)** to maximise accuracy.
+You are given a synchronised video clip (with its audio track) of a medical doctor-patient reading session. The patient has a cleft lip and palate that causes articulation disorders. Your job is to produce a diarised, verbatim transcript that faithfully captures what is actually spoken, using both audio and visual cues (lip movements, speaker presence) to maximise accuracy.
 
-TASKS  
-1. Load and analyse the audio and the corresponding video frames.  
-2. **Speaker diarization** – always label the doctor as `"Speaker 1"` and keep that ID consistent. Use both voice characteristics and visual speaker detection to decide who is talking, especially during overlaps.  
-3. **Automatic speech recognition (ASR)** – fuse audio and lip‑reading information to obtain the most faithful verbatim transcript.  
-4. **Cross‑modal verification** – when the audio is ambiguous (e.g., noise, mis‑pronunciation) rely on mouth shapes and context; when lip motion and audio disagree, prefer what is unequivocally *spoken* (never auto‑complete the reference sentence).
+TASKS
+	1.	Load and analyse the audio and corresponding video frames.
+	2.	Speaker diarization - always label the doctor as "Speaker 1" and keep that ID consistent. Use both voice characteristics and visual speaker detection to decide who is talking, especially during overlaps.
+	3.	Automatic speech recognition (ASR) - fuse audio and lip-reading information to obtain the most faithful verbatim transcript.
+	4.	Cross-modal verification - when the audio is ambiguous (e.g., noise, mispronunciation), rely on mouth shapes and context; when lip motion and audio disagree, prefer what is unequivocally spoken (never auto-complete the reference sentence).
 
-RULES  
-1. **Verbatim transcription** – retain every stutter (“爸、爸爸”), repetition, filler (“呃”), and self‑correction. Do not normalise or delete disfluencies.  
-2. **Partial readings** – if the patient omits or stops mid‑sentence, transcribe exactly what is audible/visible. Never auto‑complete.  
-3. **Error‑correction scope** – fix only obvious ASR typos for syllables and mis‑pronunciations that are clearly spoken; do **not** “correct” missing words.  
-4. **Timing precision** –  
-   • `start_time` is the true speech onset; `end_time` is the true offset (≤ 0.1 s of silence on either side).  
-5. **Overlap** – create separate entries when speakers talk at the same time.  
-6. **Privacy & visual content** – do not describe personal appearance; remove utterances that contain any names or locations that might appear in speech or on screen.  
-7. **Output** – return one valid JSON object and *nothing else*.
+RULES
+	1.	Verbatim transcription - retain every stutter (“爸、爸爸”), repetition, filler (“呃”), and self-correction. Do not normalise or delete disfluencies.
+	2.	Partial readings - if the patient omits or stops mid-sentence, transcribe exactly what is audible/visible. Never auto-complete.
+	3.	Error-correction scope - fix only obvious ASR typos for syllables and mispronunciations that are clearly spoken; do not “correct” missing words.
+	4.	Timing precision constraints -
+	•	start_time and end_time must precisely reflect speech onset and offset, respectively.
+	•	The duration of an utterance (end_time - start_time) must always reflect realistic speech intervals.
+	•	Ensure no single utterance exceeds a maximum duration of 10 seconds, unless it genuinely and visually represents continuous speech without pauses.
+	•	If speech is discontinuous or has noticeable pauses (>0.3 s), create separate utterances accordingly.
+	5.	Overlap - create separate entries when speakers talk simultaneously, each with accurate timestamps.
+	6.	Privacy & visual content - do not describe personal appearance; remove utterances containing any names or locations visible or audible.
+	7.	Output - return one valid JSON object and nothing else.
+    8.  The Speaker 2 is asked to repeat some utterances that Speaker 1 has said. You can use transcript of utterances spoken by Speaker 1 to ensure that transcripts of Speaker 2 utterances are correct".
+    9.  Make the transcript of counting utterances consecutive, do not split them into multiple utterances if it's not interrupted. For example, if Speaker 1 says "一二三四五六七八九十", it should be one utterance with the full transcript, not split into individual numbers.
 
 Example schema (illustrative only):
 {
@@ -46,35 +49,11 @@ Example schema (illustrative only):
   ]
 }
 
-REFERENCE SENTENCES (for spell‑checking only — **never copy words the patient does not actually say**):  
-    一二三四五六七八九十  
-    一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十  
-    爸爸跑步  
-    弟弟踢皮球  
-    哥哥喝可乐  
-    头发飞飞  
-    谢谢姐姐  
-    妈妈买牛奶  
-    猴子喜欢香蕉  
-    大象喜欢草莓  
-    长颈鹿喜欢山楂树  
-    早饭在桌子上  
-    奇怪而有趣的旗  
-    姥姥的榴莲  
-    叔叔的老师  
-    长长的长城  
-    炒菜菜  
-    奶奶买柠檬  
-    一起去爬坡
-    宝宝带板凳
-    贝贝唱支歌
-    妈妈牛牛毛毛猫
-    妈妈模样美
-    牛牛没眉毛
-    他去无锡市
-    我到黑龙江
-**REMEMBER – RETURN ONLY THE JSON; NEVER INSERT WORDS THAT ARE NOT HEARD OR SEEN.**
-"""
+
+REFERENCE SENTENCES (for spell-checking only — never insert words not explicitly spoken):
+一二三四五六七八九十, 一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十, 爸爸跑步, 弟弟踢皮球, 哥哥喝可乐, 头发飞飞, 谢谢姐姐, 妈妈买牛奶, 猴子喜欢香蕉, 大象喜欢草莓, 长颈鹿喜欢山楂树, 早饭在桌子上, 奇怪而有趣的旗, 姥姥的榴莲, 叔叔的老师, 长长的长城, 炒菜菜, 奶奶买柠檬, 一起去爬坡, 宝宝带板凳, 贝贝唱支歌, 妈妈牛牛毛毛猫, 妈妈模样美, 牛牛没眉毛, 他去无锡市, 我到黑龙江.
+
+REMEMBER - RETURN ONLY THE JSON; NEVER INSERT WORDS THAT ARE NOT HEARD OR SEEN. ENSURE ALL TIMESTAMPS ARE ACCURATE, CONTINUOUS, AND REFLECT REALISTIC SPEECH INTERVALS. DO NOT BUMP THE TIMESTAMPS FROM AROUND 50 SECONDS TO MORE THAN 100 SECONDS."""
 
 
 def get_args():
@@ -147,11 +126,11 @@ def main(args):
             # Wait until the uploaded video is fully processed
             video_file_cli = wait_until_active(client, video_file_cli)
             response = client.models.generate_content(
-                model="gemini-2.5-pro-preview-05-06",
+                model="gemini-2.5-pro-preview-06-05",
                 contents=[GEMINI_PROMPT, video_file_cli],
             )
         except RuntimeError as e:
-            print(f"Skipping {video_file} – {e}")
+            print(f"Skipping {video_file} - {e}")
             continue
         except Exception as e:
             print(f"Error processing {video_file}: {e}")
