@@ -69,7 +69,7 @@ def main():
             start_sec = utt.get("start_time", 0.0)
             end_sec = utt.get("end_time", start_sec)
             start_sample = int(start_sec * sr)
-            end_sample = int((end_sec + .5) * sr)
+            end_sample = int((end_sec + 0.1) * sr)
             segment = audio[start_sample:end_sample]
 
             utt_id = f"{patient_id}_{spk_label}_{idx:04d}"

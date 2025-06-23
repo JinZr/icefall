@@ -32,7 +32,7 @@ def main(args):
         + list(args.mov_dir.glob("*.MP4"))
         + list(args.mov_dir.glob("*.mp4"))
     ):
-        audio, sr = librosa.load(video_file, sr=None)
+        audio, sr = librosa.load(str(video_file), sr=None)
         audio_file = args.audio_dir / (video_file.stem + ".wav")
         sf.write(audio_file, audio, sr)
 

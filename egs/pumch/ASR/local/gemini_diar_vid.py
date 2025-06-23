@@ -3,6 +3,7 @@ import json
 import time
 from pathlib import Path
 
+import cv2
 from google import genai
 from tqdm import tqdm
 
@@ -28,7 +29,7 @@ RULES
 	6.	Privacy & visual content - do not describe personal appearance; remove utterances containing any names or locations visible or audible.
 	7.	Output - return one valid JSON object and nothing else.
     8.  The Speaker 2 is asked to repeat some utterances that Speaker 1 has said. You can use transcript of utterances spoken by Speaker 1 to ensure that transcripts of Speaker 2 utterances are correct".
-    9.  Make the transcript of counting utterances consecutive, do not split them into multiple utterances if it's not interrupted. For example, if Speaker 1 says "一二三四五六七八九十", it should be one utterance with the full transcript, not split into individual numbers.
+    9.  Make the transcript of counting utterances consecutive, do not split them into multiple utterances if it's not interrupted. For example, if Speaker 2 says "一二三四五六七八九十" or "一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十", it should be one utterance with the full transcript, not split into individual numbers.
 
 Example schema (illustrative only):
 {
@@ -51,9 +52,11 @@ Example schema (illustrative only):
 
 
 REFERENCE SENTENCES (for spell-checking only — never insert words not explicitly spoken):
-一二三四五六七八九十, 一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十, 爸爸跑步, 弟弟踢皮球, 哥哥喝可乐, 头发飞飞, 谢谢姐姐, 妈妈买牛奶, 猴子喜欢香蕉, 大象喜欢草莓, 长颈鹿喜欢山楂树, 早饭在桌子上, 奇怪而有趣的旗, 姥姥的榴莲, 叔叔的老师, 长长的长城, 炒菜菜, 奶奶买柠檬, 一起去爬坡, 宝宝带板凳, 贝贝唱支歌, 妈妈牛牛磨麦苗, 妈妈模样美, 牛牛眉眼浓, 他去无锡市, 我到黑龙江.
+一二三四五六七八九十, 一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十, 爸爸跑步, 弟弟踢皮球, 哥哥喝可乐, 头发飞飞, 谢谢姐姐, 妈妈买牛奶, 猴子喜欢香蕉, 大象喜欢草莓, 长颈鹿喜欢山楂树, 早饭在桌子上, 奇怪而有趣的旗, 姥姥的榴莲, 叔叔的老师, 长长的长城, 炒菜菜, 奶奶买柠檬, 一起去爬坡, 宝宝带板凳, 贝贝唱支歌, 妈妈牛牛磨麦苗, 妈妈模样美, 牛牛眉眼浓. 
+早晨推开前窗蜜蜂嗡嗡叫在花丛中飞舞, 大姐做饭二哥准备行囊我学妈妈认真收拾衣裳老爸永远是司机驾车去山村游玩, 我跑进羊群怀抱抚摸小羊云雾缭绕, 暖阳洒在村庄的水波中, 老翁在岸旁的柳树下花海前, 美丽的鸟儿在枝头愉快地歌唱, 微风吹过远处雄山隐约可见令人思接千载.
+他去无锡市, 我到黑龙江, 瑞雪初融迎新春, 彩云追月照家门, 对联高悬祈安康, 福字倒挂纳吉祥, 鞭炮齐鸣多喜乐, 烟花绽放祛忧愁, 爹娘堂下拜翁婆, 儿女院中试新装, 最喜兄弟梦正美, 快船撒网钓鱼虾.
 
-REMEMBER - RETURN ONLY THE JSON; NEVER INSERT WORDS THAT ARE NOT HEARD OR SEEN. ENSURE ALL TIMESTAMPS ARE ACCURATE, CONTINUOUS, AND REFLECT REALISTIC SPEECH INTERVALS. DO NOT BUMP THE TIMESTAMPS FROM AROUND 50 SECONDS TO MORE THAN 100 SECONDS. THE INTERVAL BETWEEN TWO CONSECUTIVE UTTERANCES MUST NOT EXCEED 2 SECONDS UNLESS THERE IS A REAL PAUSE IN SPEECH."""
+REMEMBER - RETURN ONLY THE JSON; NEVER INSERT WORDS THAT ARE NOT HEARD OR SEEN. ENSURE ALL TIMESTAMPS ARE ACCURATE, CONTINUOUS, AND REFLECT REALISTIC SPEECH INTERVALS. THE INTERVAL BETWEEN TWO CONSECUTIVE UTTERANCES MUST NOT EXCEED 2 SECONDS UNLESS THERE IS A REAL PAUSE IN SPEECH."""
 
 
 def get_args():
@@ -114,6 +117,19 @@ def main(args):
     client = genai.Client(api_key=sk_token)
 
     for video_file in tqdm(sorted(video_files)):
+        # Calculate video duration
+        cap = cv2.VideoCapture(str(video_file))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        if fps > 0:
+            duration = frame_count / fps
+        else:
+            duration = 0 
+        cap.release()
+        duration = round(duration, 2)
+        # Append duration to prompt
+        prompt_with_duration = GEMINI_PROMPT + f"\nVideo duration: {duration} seconds, ensure that the timestamps in the output are accurate and reflect this duration. DO NOT BUMP THE TIMESTAMPS FROM AROUND 50 SECONDS TO MORE THAN 100 SECONDS."
+
         output_file = args.output_dir / (video_file.stem + ".json")
         if output_file.exists():
             print(f"Output file {output_file} already exists. Skipping.")
@@ -126,8 +142,8 @@ def main(args):
             # Wait until the uploaded video is fully processed
             video_file_cli = wait_until_active(client, video_file_cli)
             response = client.models.generate_content(
-                model="gemini-2.5-pro-preview-06-05",
-                contents=[GEMINI_PROMPT, video_file_cli],
+                model="gemini-2.5-pro",
+                contents=[prompt_with_duration, video_file_cli],
             )
         except RuntimeError as e:
             print(f"Skipping {video_file} - {e}")
@@ -139,6 +155,7 @@ def main(args):
         response_json = json.loads(response_text)
         response_json["speaker_id"] = video_file.stem.split(" ")[-1]  # Ensure speaker ID is set
         with open(output_file, "w", encoding="utf-8") as f:
+            print(output_file)
             json.dump(response_json, f, ensure_ascii=False, indent=4)
 
 
