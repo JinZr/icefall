@@ -93,7 +93,6 @@ sixty six
 Chase the chickens."""
 
 
-
 def get_args():
     p = argparse.ArgumentParser(
         description="Transcribe all English WAVs in a folder via Gemini "
@@ -204,7 +203,11 @@ def main():
             if wav.stem not in processed
         }
 
-        for fut in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Transcribing"):
+        for fut in tqdm(
+            concurrent.futures.as_completed(futures),
+            total=len(futures),
+            desc="Transcribing",
+        ):
             result = fut.result()
             if result is None:
                 continue
