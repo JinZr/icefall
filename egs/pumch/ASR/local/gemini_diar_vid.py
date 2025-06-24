@@ -124,11 +124,14 @@ def main(args):
         if fps > 0:
             duration = frame_count / fps
         else:
-            duration = 0 
+            duration = 0
         cap.release()
         duration = round(duration, 2)
         # Append duration to prompt
-        prompt_with_duration = GEMINI_PROMPT + f"\nVideo duration: {duration} seconds, ensure that the timestamps in the output are accurate and reflect this duration. DO NOT BUMP THE TIMESTAMPS FROM AROUND 50 SECONDS TO MORE THAN 100 SECONDS."
+        prompt_with_duration = (
+            GEMINI_PROMPT
+            + f"\nVideo duration: {duration} seconds, ensure that the timestamps in the output are accurate and reflect this duration. DO NOT BUMP THE TIMESTAMPS FROM AROUND 50 SECONDS TO MORE THAN 100 SECONDS."
+        )
 
         output_file = args.output_dir / (video_file.stem + ".json")
         if output_file.exists():
@@ -153,7 +156,9 @@ def main(args):
             continue
         response_text = response.text.replace("```json", "").replace("```", "")
         response_json = json.loads(response_text)
-        response_json["speaker_id"] = video_file.stem.split(" ")[-1]  # Ensure speaker ID is set
+        response_json["speaker_id"] = video_file.stem.split(" ")[
+            -1
+        ]  # Ensure speaker ID is set
         with open(output_file, "w", encoding="utf-8") as f:
             print(output_file)
             json.dump(response_json, f, ensure_ascii=False, indent=4)
