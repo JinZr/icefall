@@ -117,6 +117,12 @@ def main(args):
     client = genai.Client(api_key=sk_token)
 
     for video_file in tqdm(sorted(video_files)):
+        # print(video_file.stem)
+        # exit()
+        # if video_file.stem != "2025-03-30 232254":
+        if video_file.stem.startswith("._"):
+            # Skip hidden files (e.g., macOS resource forks)
+            continue
         # Calculate video duration
         cap = cv2.VideoCapture(str(video_file))
         fps = cap.get(cv2.CAP_PROP_FPS)

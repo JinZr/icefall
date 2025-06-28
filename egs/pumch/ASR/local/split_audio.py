@@ -134,9 +134,9 @@ def main():
         # Write Kaldi data files in separate directory
         with open(kaldi_dir / "wav.scp", "a", encoding="utf-8") as f:
             f.write("\n".join(sorted(wav_scp, key=lambda x: x.split(" ")[0])) + "\n")
-        with open(kaldi_dir / "text", "a", encoding="utf-8") as f:
+        with open(kaldi_dir / "text_orig", "a", encoding="utf-8") as f:
             f.write("\n".join(sorted(text, key=lambda x: x.split(" ")[0])) + "\n")
-        with open(kaldi_dir / "text_normalized", "a", encoding="utf-8") as f:
+        with open(kaldi_dir / "text", "a", encoding="utf-8") as f:
             f.write(
                 "\n".join(sorted(text_normalized, key=lambda x: x.split(" ")[0])) + "\n"
             )
