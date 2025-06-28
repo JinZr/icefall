@@ -2,9 +2,7 @@
 # fine_tune_ssl.py
 # Fine‑tune wav2vec‑family (or any CTC SSL) on a Hugging Face CSV corpus.
 import argparse
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Union
 
 import evaluate
 import numpy as np
@@ -54,6 +52,7 @@ def main():
             "text",
         ],  # 'path' → audio file, 'text' → transcript
         split="train",
+        keep_in_memory=False,
     )
     valid_ds = load_dataset(
         "csv",
@@ -65,6 +64,7 @@ def main():
             "text",
         ],  # 'path' → audio file, 'text' → transcript
         split="train",
+        keep_in_memory=False,
     )
 
     # Cast the 'path' column so each example lazily loads the waveform.
@@ -131,6 +131,7 @@ def main():
         save_total_limit=3,
         logging_steps=50,
         push_to_hub=args.push_to_hub,
+        report_to=["tensorboard"],
     )
 
     trainer = Trainer(

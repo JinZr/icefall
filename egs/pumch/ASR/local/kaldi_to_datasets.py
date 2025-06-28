@@ -52,7 +52,7 @@ def main():
 
     with args.out.open("w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(["id", "speaker", "path", "text"])
+        # writer.writerow(["id", "speaker", "path", "text"])
         for uid in utt_ids:
             writer.writerow([uid, spk_map[uid], wav_map[uid], text_map[uid]])
 
