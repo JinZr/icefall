@@ -31,7 +31,7 @@ def main():
     if not cn_units or not en_units:
         raise ValueError("Units files cannot be empty.")
 
-    all_units = cn_units + en_units + ["|"]
+    all_units = ["|"] + cn_units + en_units
     unit_dict = {v: k for k, v in enumerate(all_units)}
     unit_dict["[UNK]"] = len(unit_dict)
     unit_dict["[PAD]"] = len(unit_dict)
