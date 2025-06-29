@@ -57,7 +57,7 @@ def get_args():
         "--valid-csv", required=True, type=str, help="Path to the validation CSV file"
     )
     p.add_argument("--model-name", default="facebook/wav2vec2-base")
-    p.add_argument("--output-dir", default="./w2v_ctc/exp", type=Path)
+    p.add_argument("--exp-dir", default="./w2v_ctc/exp", type=Path)
     p.add_argument("--epochs", type=int, default=50)
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--learning-rate", type=float, default=5e-5)
