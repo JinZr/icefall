@@ -2,6 +2,7 @@
 # fine_tune_ssl.py
 # Fine‑tune wav2vec‑family (or any CTC SSL) on a Hugging Face CSV corpus.
 import argparse
+import re
 from pathlib import Path
 
 import evaluate
@@ -21,6 +22,31 @@ from transformers.utils import logging
 logging.set_verbosity_info()
 
 
+def tokenize_by_CJK_char(line: str) -> str:
+    """
+    Tokenize a line of text with CJK char.
+
+    Note: All return characters will be upper case.
+
+    Example:
+      input = "你好世界是 hello world 的中文"
+      output = "你 好 世 界 是 HELLO WORLD 的 中 文"
+
+    Args:
+      line:
+        The input text.
+
+    Return:
+      A new string tokenize by CJK char.
+    """
+    # The CJK ranges is from https://github.com/alvations/nltk/blob/79eed6ddea0d0a2c212c1060b477fc268fec4d4b/nltk/tokenize/util.py
+    pattern = re.compile(
+        r"([\u1100-\u11ff\u2e80-\ua4cf\ua840-\uD7AF\uF900-\uFAFF\uFE30-\uFE4F\uFF65-\uFFDC\U00020000-\U0002FFFF])"
+    )
+    chars = pattern.split(line.strip().upper())
+    return " ".join([w.strip() for w in chars if w.strip()])
+
+
 # ──────────────────── CLI ────────────────────
 def get_args():
     p = argparse.ArgumentParser()
@@ -32,9 +58,9 @@ def get_args():
     )
     p.add_argument("--model-name", default="facebook/wav2vec2-base")
     p.add_argument("--output-dir", default="./w2v_ctc/exp", type=Path)
-    p.add_argument("--epochs", type=int, default=10)
-    p.add_argument("--batch-size", type=int, default=4)
-    p.add_argument("--learning-rate", type=float, default=3e-4)
+    p.add_argument("--epochs", type=int, default=50)
+    p.add_argument("--batch-size", type=int, default=32)
+    p.add_argument("--learning-rate", type=float, default=5e-5)
     p.add_argument("--push-to-hub", action="store_true")
     return p.parse_args()
 
@@ -96,9 +122,7 @@ def main():
         args.model_name,
         ctc_loss_reduction="mean",
         pad_token_id=processor.tokenizer.pad_token_id,
-        vocab_size=len(
-            tokenizer
-        ),  # Ensure the model's vocab size matches the tokenizer
+        vocab_size=len(tokenizer),
     )
     model.freeze_feature_extractor()  # Freeze the feature extractor
 
@@ -111,8 +135,12 @@ def main():
         pred.label_ids[pred.label_ids == -100] = processor.tokenizer.pad_token_id
 
         pred_str = processor.batch_decode(pred_ids)
-        # we do not want to group tokens when computing the metrics
         label_str = processor.batch_decode(pred.label_ids, group_tokens=False)
+
+        pred_str = list(map(tokenize_by_CJK_char, pred_str))
+        label_str = list(map(tokenize_by_CJK_char, label_str))
+        print(pred_str)
+        print(label_str)
 
         wer = wer_metric.compute(predictions=pred_str, references=label_str)
 
@@ -124,6 +152,7 @@ def main():
         output_dir=str(args.output_dir),
         fp16=torch.cuda.is_available(),
         eval_strategy="epoch",
+        save_strategy="epoch",
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
         learning_rate=args.learning_rate,
@@ -132,6 +161,7 @@ def main():
         logging_steps=50,
         push_to_hub=args.push_to_hub,
         report_to=["tensorboard"],
+        warmup_steps=1000,
     )
 
     trainer = Trainer(

@@ -121,8 +121,11 @@ class DataCollatorCTCWithPadding:
             )
 
         # Replace pad token IDs by -100 so they are ignored by loss
-        labels = labels_batch["input_ids"]
-        labels[labels == self.processor.tokenizer.pad_token_id] = -100
+        # labels = labels_batch["input_ids"]
+        # labels[labels == self.processor.tokenizer.pad_token_id] = -100
+        labels = labels_batch["input_ids"].masked_fill(
+            labels_batch.attention_mask.ne(1), -100
+        )
         batch["labels"] = labels
 
         return batch
