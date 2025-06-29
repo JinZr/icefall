@@ -14,8 +14,8 @@ from transformers import (
     Trainer,
     TrainingArguments,
     Wav2Vec2CTCTokenizer,
+    Wav2Vec2Processor,
     WavLMForCTC,
-    WavLMProcessor,
 )
 from transformers.utils import logging
 
@@ -115,7 +115,7 @@ def main():
     )
 
     
-    processor = WavLMProcessor.from_pretrained(
+    processor = Wav2Vec2Processor.from_pretrained(
         args.model_name,
         tokenizer=tokenizer,
     )
