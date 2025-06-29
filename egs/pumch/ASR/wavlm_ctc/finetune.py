@@ -118,6 +118,7 @@ def main():
     processor = Wav2Vec2Processor.from_pretrained(
         args.model_name,
         tokenizer=tokenizer,
+        trust_remote_code=True,
     )
     model = WavLMForCTC.from_pretrained(
         args.model_name,
