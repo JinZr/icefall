@@ -14,8 +14,8 @@ from transformers import (
     Trainer,
     TrainingArguments,
     Wav2Vec2CTCTokenizer,
-    Wav2Vec2ForCTC,
-    Wav2Vec2Processor,
+    WavLMForCTC,
+    WavLMProcessor,
 )
 from transformers.utils import logging
 
@@ -56,8 +56,8 @@ def get_args():
     p.add_argument(
         "--valid-csv", required=True, type=str, help="Path to the validation CSV file"
     )
-    p.add_argument("--model-name", default="facebook/wav2vec2-base")
-    p.add_argument("--exp-dir", default="./w2v_ctc/exp", type=Path)
+    p.add_argument("--model-name", default="microsoft/wavlm-base")
+    p.add_argument("--exp-dir", default="./wavlm_ctc/exp", type=Path)
     p.add_argument("--epochs", type=int, default=50)
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--learning-rate", type=float, default=5e-5)
@@ -114,17 +114,18 @@ def main():
         word_delimiter_token="|",
     )
 
-    processor = Wav2Vec2Processor.from_pretrained(
+    
+    processor = WavLMProcessor.from_pretrained(
         args.model_name,
         tokenizer=tokenizer,
     )
-    model = Wav2Vec2ForCTC.from_pretrained(
+    model = WavLMForCTC.from_pretrained(
         args.model_name,
         ctc_loss_reduction="mean",
         pad_token_id=processor.tokenizer.pad_token_id,
         vocab_size=len(tokenizer),
     )
-    model.freeze_feature_extractor()  # Freeze the feature extractor
+    model.freeze_feature_extractor()
 
     wer_metric = evaluate.load("wer")
 
