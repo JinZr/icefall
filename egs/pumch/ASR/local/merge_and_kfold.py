@@ -10,6 +10,9 @@ Example
 python merge_and_kfold.py \
     --out-root data_cv5 \
     data/train_dir1 data/train_dir2 data/train_dir3
+
+Add “--keep-duplicates” if you wish to retain every duplicate by renaming:
+python merge_and_kfold.py --keep-duplicates ...
 """
 
 from __future__ import annotations
@@ -74,7 +77,9 @@ def make_spk2utt(utt2spk: Dict[str, str]) -> Dict[str, str]:
 
 
 def merge_dirs(
-    src_dirs: List[pathlib.Path], merged_dir: pathlib.Path
+    src_dirs: List[pathlib.Path],
+    merged_dir: pathlib.Path,
+    keep_duplicates: bool = False,
 ) -> Tuple[Dict[str, str], Dict[str, str]]:
     """
     Merge Kaldi dirs.  Returns dictionaries of merged wav.scp and utt2spk
@@ -89,6 +94,27 @@ def merge_dirs(
         fname: collections.OrderedDict() for fname in KALDI_FILES_PRIORITY
     }
 
+    # Prepare structures for optional duplicate‑renaming
+    seen_keys: Set[str] = set()
+    rename_map: Dict[Tuple[str, str], str] = {}
+
+    def uniquify_key(
+        src_name: str, k: str, seen: Set[str], rename_map: Dict[Tuple[str, str], str]
+    ) -> str:
+        if k not in seen:
+            seen.add(k)
+            return k
+        # Generate a new unique key: append src_name and a counter if needed
+        base = f"{k}_{src_name}"
+        candidate = base
+        idx = 1
+        while candidate in seen:
+            candidate = f"{base}_{idx}"
+            idx += 1
+        seen.add(candidate)
+        rename_map[(src_name, k)] = candidate
+        return candidate
+
     for src in src_dirs:
         for fname in KALDI_FILES_PRIORITY:
             f = src / fname
@@ -97,13 +123,22 @@ def merge_dirs(
             current = read_kaldi_kv(f)
             tgt = merged[fname]
             for k, v in current.items():
-                if k in tgt and tgt[k] != v:
-                    print(
-                        f"[WARN] {fname}: duplicate key '{k}' – keeping first value.",
-                        file=sys.stderr,
-                    )
-                    continue
-                tgt[k] = v
+                if keep_duplicates:
+                    new_k = uniquify_key(src.name, k, seen_keys, rename_map)
+                    if new_k != k:
+                        print(
+                            f"[WARN] {fname}: duplicate key '{k}' – renamed to '{new_k}'.",
+                            file=sys.stderr,
+                        )
+                    tgt[new_k] = v
+                else:
+                    if k in tgt and tgt[k] != v:
+                        print(
+                            f"[WARN] {fname}: duplicate key '{k}' – keeping first value.",
+                            file=sys.stderr,
+                        )
+                        continue
+                    tgt[k] = v
 
     # write merged files
     for fname, kv in merged.items():
@@ -217,6 +252,12 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument(
         "--seed", type=int, default=2025, help="Random seed (default 2025)."
     )
+    ap.add_argument(
+        "--keep-duplicates",
+        action="store_true",
+        help="If set, keep duplicate utterance IDs by renaming them "
+        "(default behaviour keeps only the first occurrence).",
+    )
     return ap.parse_args()
 
 
@@ -226,7 +267,7 @@ def main() -> None:
 
     merged_dir = args.out_root / "merged"
     print("[INFO] Merging source dirs …")
-    _, utt2spk = merge_dirs(args.src_dirs, merged_dir)
+    _, utt2spk = merge_dirs(args.src_dirs, merged_dir, args.keep_duplicates)
 
     print("[INFO] Creating 5-fold speaker splits …")
     make_folds(merged_dir, args.out_root, utt2spk, args.seed)
