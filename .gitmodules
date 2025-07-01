@@ -1,0 +1,3 @@
+[submodule "egs/pumch/ASR/evaluate"]
+	path = egs/pumch/ASR/evaluate
+	url = https://github.com/huggingface/evaluate

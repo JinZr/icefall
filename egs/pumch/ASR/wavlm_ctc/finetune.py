@@ -126,9 +126,12 @@ def main():
         pad_token_id=processor.tokenizer.pad_token_id,
         vocab_size=len(tokenizer),
     )
-    model.freeze_feature_extractor()
+    # Avoid infinite CTC losses caused by very short inputs vs. long targets
+    model.config.ctc_zero_infinity = True
 
-    wer_metric = evaluate.load("wer")
+    model.freeze_feature_encoder()
+
+    wer_metric = evaluate.load("evaluate/metrics/wer/wer.py")
 
     def compute_metrics(pred):
         pred_logits = pred.predictions
@@ -163,7 +166,7 @@ def main():
         logging_steps=50,
         push_to_hub=args.push_to_hub,
         report_to=["tensorboard"],
-        warmup_steps=1000,
+        warmup_steps=500,
     )
 
     trainer = Trainer(
