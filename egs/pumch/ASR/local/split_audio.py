@@ -74,10 +74,10 @@ def main():
     root_out = Path(args.output_dir)
 
     for json_path in tqdm(json_dir.glob("*.json")):
-        # Directories for WAV segments and Kaldi labels
-        wav_dir = root_out / "wav"
+        if json_path.stem.startswith("."):
+            continue
+        # Directory for Kaldi label files
         kaldi_dir = root_out / "kaldi"
-        wav_dir.mkdir(parents=True, exist_ok=True)
         kaldi_dir.mkdir(parents=True, exist_ok=True)
 
         patient_id = json_path.stem
@@ -94,6 +94,14 @@ def main():
                 data = json.load(j)
         except json.JSONDecodeError as e:
             raise ValueError(f"Error reading JSON file {json_path}: {e}")
+
+        # Create per‑speaker folders for WAV segments
+        speaker_key = str(data.get("speaker_id", json_path.stem))
+        patient_wav_dir = root_out / speaker_key
+        investigator_wav_dir = root_out / "investigator"
+        patient_wav_dir.mkdir(parents=True, exist_ok=True)
+        investigator_wav_dir.mkdir(parents=True, exist_ok=True)
+
         utterances = data.get("utterances", [])
         # utterances = sorted(utterances, key=lambda x: x.get("start_time", 0.0))
 
@@ -121,7 +129,8 @@ def main():
             utt_id = f"{patient_id}_{spk_label}_{idx:04d}"
             utt_id = utt_id.replace(" ", "_").upper()
 
-            out_wav = wav_dir / f"{utt_id}.wav"
+            out_dir = patient_wav_dir if spkr == "Speaker 2" else investigator_wav_dir
+            out_wav = out_dir / f"{utt_id}.wav"
             sf.write(str(out_wav), segment, sr)
 
             # Record entries
