@@ -97,8 +97,8 @@ def main():
 
         # Create per‑speaker folders for WAV segments
         speaker_key = str(data.get("speaker_id", json_path.stem))
-        patient_wav_dir = root_out / speaker_key
-        investigator_wav_dir = root_out / "investigator"
+        patient_wav_dir = root_out / "wav" / speaker_key
+        investigator_wav_dir = root_out / "wav" / "investigator" / speaker_key
         patient_wav_dir.mkdir(parents=True, exist_ok=True)
         investigator_wav_dir.mkdir(parents=True, exist_ok=True)
 
@@ -114,11 +114,11 @@ def main():
         for idx, utt in enumerate(utterances, start=1):
             spkr = utt.get("speaker_id", "Other")
             if spkr == "Speaker 1":
-                spk_label = "INV"
+                spk_label = f"{speaker_key}_INV"
             elif spkr == "Speaker 2":
-                spk_label = "PAR"
+                spk_label = f"{speaker_key}_PAR"
             else:
-                spk_label = spkr.replace(" ", "_").upper()
+                spk_label = f"{speaker_key}_{spkr.replace(' ', '_').upper()}"
 
             start_sec = utt.get("start_time", 0.0)
             end_sec = utt.get("end_time", start_sec)
