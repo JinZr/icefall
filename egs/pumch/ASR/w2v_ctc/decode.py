@@ -81,7 +81,7 @@ def main():
     # 3. 推断 -----------------------------------------------------------------------
     utt_ids, utt_paths, predictions, references = [], [], [], []
     for batch in tqdm(ds.iter(batch_size=args.batch_size), desc="Decoding"):
-        for input_value in batch["input_values"]: 
+        for input_value in batch["input_values"]:
             utt_paths.append(input_value["path"])
             inputs = processor(
                 input_value["array"],
@@ -116,9 +116,9 @@ def main():
             "paths": utt_paths,
         }
     )
-    df.to_csv(output_dir / "decoded.csv", index=False, encoding="utf-8")
+    df.to_csv(output_dir / f"{args.decoding_method}.csv", index=False, encoding="utf-8")
 
-    with open(output_dir / "metrics.json", "w", encoding="utf-8") as fp:
+    with open(output_dir / f"{args.decoding_method}.json", "w", encoding="utf-8") as fp:
         json.dump({"wer": wer}, fp, indent=2, ensure_ascii=False)
 
     print(f"✔ Decoding finished — WER = {wer:.4%}")
