@@ -79,22 +79,24 @@ def main():
     data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
     # 3. 推断 -----------------------------------------------------------------------
-    predictions, references = [], []
+    utt_ids, utt_paths, predictions, references = [], [], [], []
     for batch in tqdm(ds.iter(batch_size=args.batch_size), desc="Decoding"):
-        inputs = processor(
-            batch["input_values"]["array"],
-            sampling_rate=16_000,
-            return_tensors="pt",
-            padding=True,
-        )
-        with torch.no_grad():
-            logits = model(
-                inputs.input_values.to(model.device),
-                attention_mask=inputs.attention_mask.to(model.device),
-            ).logits
-        ids = torch.argmax(logits, dim=-1)
-        preds = processor.batch_decode(ids)
-        predictions.extend(preds)
+        for input_value in batch["input_values"]: 
+            utt_paths.append(input_value["path"])
+            inputs = processor(
+                input_value["array"],
+                sampling_rate=16_000,
+                return_tensors="pt",
+                padding=True,
+            )
+            with torch.no_grad():
+                logits = model(
+                    inputs.input_values.to(model.device),
+                ).logits
+            ids = torch.argmax(logits, dim=-1)
+            preds = processor.batch_decode(ids)
+            predictions.extend(preds)
+        utt_ids.extend(batch["id"])
         references.extend(batch["text"])
 
     # 4. 计算 WER -------------------------------------------------------------------
@@ -108,8 +110,10 @@ def main():
     # 5. 保存结果 -------------------------------------------------------------------
     df = pd.DataFrame(
         {
+            "ids": utt_ids,
             "reference": references,
             "hypothesis": predictions,
+            "paths": utt_paths,
         }
     )
     df.to_csv(output_dir / "decoded.csv", index=False, encoding="utf-8")
