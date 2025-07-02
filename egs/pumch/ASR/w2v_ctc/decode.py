@@ -8,7 +8,6 @@ import re
 from pathlib import Path
 
 import evaluate
-import numpy as np
 import pandas as pd
 import torch
 from collator import DataCollatorCTCWithPadding  # 与 finetune.py 相同的打包器
@@ -102,7 +101,7 @@ def main():
     # 4. 计算 WER -------------------------------------------------------------------
     refs_tokenized = list(map(tokenize_by_CJK_char, references))
     hyps_tokenized = list(map(tokenize_by_CJK_char, predictions))
-    wer_metric = evaluate.load("wer")
+    wer_metric = evaluate.load("evaluate/metrics/wer/wer.py")
     wer = float(
         wer_metric.compute(predictions=hyps_tokenized, references=refs_tokenized)
     )
