@@ -37,7 +37,7 @@ def get_args():
         help="待评估的 CSV (id speaker path text)",
     )
     p.add_argument(
-        "--model-dir",
+        "--exp-dir",
         required=True,
         type=Path,
         help="finetune.py 训练产出的目录（含 config/模型权重/tokenizer)",
