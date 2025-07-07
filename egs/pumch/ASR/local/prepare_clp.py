@@ -103,8 +103,8 @@ if __name__ == "__main__":
         default="data/clp_database",
         help="dataset root (contains control/ & hyper/)",
     )
-    p.add_argument("--control-json", default="./data/control_text.json")
-    p.add_argument("--hyper-json", default="./data/hyper_text.json")
+    p.add_argument("--control-json", default="./local/control_text.json")
+    p.add_argument("--hyper-json", default="./local/hyper_text.json")
     p.add_argument(
         "--output-csv", type=Path, required=True, help="output CSV file path"
     )
