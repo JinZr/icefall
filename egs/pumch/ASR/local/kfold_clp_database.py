@@ -72,8 +72,8 @@ def main(args):
 
         # Write CSVs
         fold_dir.mkdir(parents=True, exist_ok=True)
-        df_train.to_csv(fold_dir / "train.csv", index=False)
-        df_val.to_csv(fold_dir / "val.csv", index=False)
+        df_train.to_csv(fold_dir / "train.csv", index=False, header=False)
+        df_val.to_csv(fold_dir / "val.csv", index=False, header=False)
 
         # Write Kaldi files
         write_kaldi_files(df_train, train_dir)
