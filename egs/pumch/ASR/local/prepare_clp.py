@@ -70,7 +70,7 @@ def main(args):
             if not fn.lower().endswith(".wav"):
                 continue
             full_path = os.path.join(root, fn)
-            rel_path = os.path.relpath(full_path, args.data_root)
+            # rel_path = os.path.relpath(full_path, args.data_root)
             utt_id = os.path.splitext(fn)[0]
             spk_id = utt_id.split("_")[0]
 
@@ -83,14 +83,14 @@ def main(args):
                 continue
 
             norm_text = normalize(text)
-            rows.append([utt_id, spk_id, rel_path, norm_text])
+            rows.append([utt_id, spk_id, full_path, norm_text])
 
     rows.sort()  # 可让 csv 行固定（按路径排序）
 
     header = ["utt_id", "spk_id", "path", "text"]
     with open(args.output_csv, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(header)
+        # writer.writerow(header) 
         writer.writerows(rows)
 
     print(f"✔ Wrote {len(rows)} lines to {args.output_csv}")
