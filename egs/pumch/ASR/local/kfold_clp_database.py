@@ -2,8 +2,7 @@
 """
 generate_kfold.py
 
-Create k-fold (default = 5) splits for ASR data, keeping “NH” utterances
-always in training and cross-validating over “HN” utterances.
+Create k-fold (default = 5) splits for ASR data, keeping “NH” utterances always in training and performing **speaker‑based** cross‑validation over “HN” utterances.
 
 Usage
 -----
@@ -14,7 +13,7 @@ import os
 from pathlib import Path
 
 import pandas as pd
-from sklearn.model_selection import KFold
+from sklearn.model_selection import GroupKFold
 
 
 def write_kaldi_files(df: pd.DataFrame, dst: Path) -> None:
@@ -55,11 +54,14 @@ def main(args):
 
     df_nh = df[df.utt_id.str.contains("NH")]
     df_hn = df[df.utt_id.str.contains("HN")]
+    # Shuffle once to randomize speaker order while keeping reproducibility
+    df_hn = df_hn.sample(frac=1, random_state=1234).reset_index(drop=True)
 
-    kfold = KFold(n_splits=args.k, shuffle=True, random_state=1234)
+    gkf = GroupKFold(n_splits=args.k)
 
     out_root = Path(args.out_dir)
-    for fold_idx, (train_idx, val_idx) in enumerate(kfold.split(df_hn), start=1):
+    for fold_idx, (train_idx, val_idx) in enumerate(
+            gkf.split(df_hn, groups=df_hn.spk_id), start=1):
         fold_dir = out_root / f"fold{fold_idx}"
         train_dir = fold_dir / "train"
         val_dir = fold_dir / "val"
